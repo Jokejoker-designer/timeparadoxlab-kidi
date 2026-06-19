@@ -1,318 +1,841 @@
-# TimeParadoxLab 3D — 5D Singularity Spacetime Simulator
+# TimeParadoxLab / Kidi
 
-A research **visualization** + **typed singular state machine** for the
-split-complex / α-axis singularity model, now with an interactive **3D `(x, t, α)`
-volume** (Three.js) alongside the original 2D slices.
+**TimeParadoxLab / Kidi** is a local-first research visualization for a speculative singular-boundary model. It combines typed singular algebra, an alpha/W corridor, light-baseline comparison, projected-speed analysis, and a V–W feasibility field.
 
-> **Honesty boundary (important).** This is a research visualization, *not* a
-> claim of verified new physics.
-> - The split-complex unit `j` (`j²=1`) is ordinary commutative algebra — it is
->   *not* `1/0`.
-> - A division-by-zero / boundary event is a **typed singular object** (tag
->   operator `D0(a)=a#`, graded by order λ). There is no honest ring element `K`
->   with `0·K=1`; we never coerce a singularity to `∞`. A feedback contradiction
->   is the typed **`Bottom`**, *not* a synthetic infinite order.
-> - `ds² = c²dt² − dx² − dy² − dz² + dα²` has **two timelike directions**. The
->   α-axis is a *modeling coordinate for singular structure*, a speculative
->   kinematics — not a conservative extension of special relativity.
+The project is not presented as verified physics. It is a browser-based simulator for exploring one mathematical idea:
+
+> A singular boundary should be preserved as typed structure, not collapsed into infinity.
 
 ---
 
-## Run it
+## Status
 
-### A) Offline standalone (no toolchain — recommended right now)
+Current build includes:
 
-Open **`standalone.html`** in a browser (double-click works). React, ReactDOM,
-**Three.js** and Babel are vendored in `vendor/`, so it runs fully offline; the
-TypeScript is transpiled in-browser at load. If your browser is strict about
-`file://`:
+* typed singular states: `Real`, `Singular`, `Bottom`
+* split-complex alpha/W boundary geometry
+* 2D spacetime view
+* 2D alpha-plane view
+* 3D `(x,t,α)` volume view
+* light-speed reference baseline
+* Kidi projected-speed panel
+* V–W correlation field
+* diagnostics panel
+* event log
+* offline `standalone.html`
+* self-test support
 
-```bash
-python -m http.server 8000      # then open http://localhost:8000/standalone.html
+---
+
+## Honesty boundary
+
+This repository is a **research visualization**, not a proof of real-world faster-than-light travel or real time travel.
+
+It does **not** claim:
+
+* verified new physics,
+* physical faster-than-light transport,
+* a photon rest frame,
+* real time travel,
+* a replacement for special relativity,
+* a true algebraic inverse of zero.
+
+The split-complex unit `j` is only a direction unit:
+
+```math
+j^2 = 1
 ```
 
-`standalone.html` is **generated from the same `src/` TypeScript** by:
+It is not `1/0`.
+
+A Kidi state is a typed boundary object. The simulator does not assert that there is a normal number `K` such that:
+
+```math
+0 \cdot K = 1
+```
+
+Instead, boundary and contradiction states are preserved as data:
+
+```ts
+Real(value)
+Singular(coeff, order, branch, reason)
+Bottom(reason)
+```
+
+---
+
+## Brainstorm history
+
+This section documents how the project evolved.
+
+### 1. Starting point: do not call `1/0` infinity
+
+The first idea was simple:
+
+> Do not force `1/0` to become infinity. Treat it as a singular tag attached to the numerator.
+
+Instead of:
+
+```math
+\frac{1}{0}=\infty
+```
+
+the model uses a formal singular notation:
+
+```math
+\frac{1}{0}=1\#
+```
+
+More generally:
+
+```math
+\frac{a}{0}=a\#
+```
+
+This does not mean `a#` is a normal number. It means the calculation reached a singular boundary and preserved the coefficient `a`.
+
+So the first design rule became:
+
+> Singular events should stay visible as typed information.
+
+---
+
+### 2. From `a#` to typed states
+
+The next problem was safety. If `a#` is allowed to behave like a normal number, the algebra becomes unsafe.
+
+So the model separates values into three states:
+
+```ts
+Real(value)
+Singular(coeff, order, branch, reason)
+Bottom(reason)
+```
+
+Their meanings are:
+
+| State                                    | Meaning                                      |
+| ---------------------------------------- | -------------------------------------------- |
+| `Real(value)`                            | ordinary finite value                        |
+| `Singular(coeff, order, branch, reason)` | Kidi boundary state                          |
+| `Bottom(reason)`                         | contradiction or irreducible undefined state |
+
+A contradiction is not treated as “larger infinity”. It becomes `Bottom`.
+
+Example:
+
+```text
+reverse arrival + feedback loop = Bottom
+```
+
+This lets the simulator display paradoxes instead of hiding them.
+
+---
+
+### 3. Split-complex alpha axis
+
+To visualize the boundary, the model introduced a split-complex style coordinate:
+
+```math
+z=x+j\alpha
+```
+
+with:
+
+```math
+j^2=1
+```
+
+The split invariant is:
+
+```math
+\Delta_{\text{split}}=x^2-\alpha^2
+```
+
+The Kidi boundary appears when:
+
+```math
+\Delta_{\text{split}}=0
+```
+
+so:
+
+```math
+x^2-\alpha^2=0
+```
+
+therefore:
+
+```math
+\alpha=\pm x
+```
+
+This gives three regions:
+
+| Region         | Condition   | Meaning                                 |
+| -------------- | ----------- | --------------------------------------- |
+| Real domain    | `x²−α² > 0` | ordinary projected corridor             |
+| Kidi boundary  | `x²−α² = 0` | singular boundary                       |
+| Alpha/W domain | `x²−α² < 0` | no real projected time under this model |
+
+---
+
+### 4. From 2D to 3D
+
+The first visualization was a 2D alpha-plane:
+
+```text
+x-axis = spatial displacement
+alpha-axis = W / singular displacement
+```
+
+The Kidi boundary lines are:
+
+```math
+\alpha=+x
+```
+
+and:
+
+```math
+\alpha=-x
+```
+
+Then the project added time `t`, giving a 3D teaching volume:
+
+```text
+(x, t, α)
+```
+
+In this view, the two boundary lines extend along time and become two Kidi branch planes.
+
+So the 3D scene is not the proof itself. It is a visual teaching layer for the boundary structure.
+
+---
+
+### 5. Original 5D framing
+
+The broader speculative model can be written as:
+
+```math
+ds^2=c^2dt^2-dx^2-dy^2-dz^2+d\alpha^2
+```
+
+For the Bob-to-Alice simulator, this is reduced to:
+
+```math
+ds^2=c^2dt^2-dx^2+d\alpha^2
+```
+
+For a null signal:
+
+```math
+0=c^2dt^2-dx^2+d\alpha^2
+```
+
+which gives:
+
+```math
+|dt_{\text{signal}}|=\frac{\sqrt{dx^2-d\alpha^2}}{c}
+```
+
+This produced the first TimeParadoxLab phases:
+
+| Phase    |          α / W | Branch | Meaning                       |    |   |     |                    |
+| -------- | -------------: | ------ | ----------------------------- | -- | - | --- | ------------------ |
+| Ordinary |            `0` | `+`    | ordinary light-speed behavior |    |   |     |                    |
+| Shortcut |            `0< | α      | <                             | dx | ` | `+` | projected shortcut |
+| Boundary |              ` | α      | =                             | dx | ` | `+` | Kidi boundary      |
+| Paradox  |  near boundary | `−`    | reverse arrival               |    |   |     |                    |
+| Feedback | reverse + loop | `−`    | contradiction / Bottom        |    |   |     |                    |
+
+---
+
+### 6. Important correction: negative time is not required
+
+The project later separated two different ideas:
+
+1. **Kidi corridor shortcut**
+2. **Time paradox**
+
+The shortcut only requires:
+
+```math
+0<|W|<D
+```
+
+where:
+
+```math
+D=|dx|
+```
+
+This can let a path arrive before the ordinary `α=0` light baseline while still arriving after the send time.
+
+The paradox layer needs extra choices such as reverse branch or feedback loop.
+
+So the main correction was:
+
+> The core Kidi corridor feasibility model does not need negative time.
+
+The time-paradox module remains useful as an advanced exploration layer, but it is not required for the main V–W feasibility result.
+
+---
+
+### 7. Light-speed reference baseline
+
+To make the shortcut meaningful, the simulator needed a stable comparison path.
+
+The ordinary light baseline is:
+
+```math
+dt_{\text{light}}=\frac{|dx|}{c}
+```
+
+```math
+t_{\text{light arrival}}=t_{\text{send}}+\frac{|dx|}{c}
+```
+
+This baseline uses:
+
+```text
+α = 0
+```
+
+It is not a photon rest frame. It is only a comparison ruler.
+
+Default example:
+
+```text
+Bob x = 0
+Alice x = 5
+send t = 2
+c = 1
+```
+
+The light baseline arrives at:
+
+```math
+t=2+5=7
+```
+
+If the Kidi path arrives at `t=5`, the app reports that it arrives 2 time units before the baseline.
+
+---
+
+### 8. Equivalent projected speed
+
+The next layer asks:
+
+> What ordinary 3D speed would reproduce the same arrival time if there were no W/alpha corridor?
+
+Using:
+
+```math
+\Delta_{\text{signal}}=dx^2-dW^2
+```
+
+the equivalent projected speed is:
+
+```math
+v_{\text{equiv}}=\frac{c|dx|}{\sqrt{dx^2-dW^2}}
+```
+
+and:
+
+```math
+\beta_{\text{equiv}}=\frac{v_{\text{equiv}}}{c}
+```
+
+Define:
+
+```math
+\eta=\frac{|W|}{|dx|}
+```
+
+Then:
+
+```math
+\beta_{\text{equiv}}=\frac{1}{\sqrt{1-\eta^2}}
+```
+
+This shows how a nonzero W/alpha component can create a projected speed greater than `c`.
+
+This is still not a claim of verified real-world FTL. It is an equivalent projected speed inside the model.
+
+---
+
+### 9. Final core insight: V–W correlation
+
+The most important later correction was this:
+
+> The project should not only show projected speed. It should show the relationship between local speed `V` and W displacement.
+
+The question became:
+
+```text
+Can local speed V stay below c, while still arriving before the ordinary α=0 light baseline?
+```
+
+Inside the reduced Kidi corridor model, the answer is yes if W is large enough.
+
+Define:
+
+```math
+D=|dx|
+```
+
+```math
+\eta=\frac{|W|}{D}
+```
+
+```math
+\beta=\frac{V}{c}
+```
+
+The effective corridor distance is:
+
+```math
+D_{\text{eff}}=D\sqrt{1-\eta^2}
+```
+
+The sub-c corridor travel time is:
+
+```math
+t_{\text{sub-c}}=\frac{D_{\text{eff}}}{V}
+```
+
+The ordinary light baseline is:
+
+```math
+t_{\text{light}}=\frac{D}{c}
+```
+
+The sub-c corridor beats the baseline when:
+
+```math
+t_{\text{sub-c}}<t_{\text{light}}
+```
+
+which simplifies to:
+
+```math
+\beta^2+\eta^2>1
+```
+
+with:
+
+```math
+0<\beta<1
+```
+
+and:
+
+```math
+0<\eta<1
+```
+
+This is the main V–W feasibility field.
+
+The key insight is:
+
+```text
+higher W  -> lower required V
+higher V  -> lower required W
+```
+
+---
+
+## Core formulas
+
+### Split-complex boundary
+
+```math
+z=x+j\alpha,\qquad j^2=1
+```
+
+```math
+\Delta_{\text{split}}=x^2-\alpha^2
+```
+
+```math
+\Delta_{\text{split}}=0 \iff \alpha=\pm x
+```
+
+---
+
+### Signal time
+
+```math
+0=c^2dt^2-dx^2+dW^2
+```
+
+```math
+|dt_{\text{signal}}|=\frac{\sqrt{dx^2-dW^2}}{c}
+```
+
+---
+
+### Light baseline
+
+```math
+dt_{\text{light}}=\frac{|dx|}{c}
+```
+
+```math
+t_{\text{light arrival}}=t_{\text{send}}+\frac{|dx|}{c}
+```
+
+---
+
+### Equivalent projected speed
+
+```math
+v_{\text{equiv}}=\frac{c|dx|}{\sqrt{dx^2-dW^2}}
+```
+
+```math
+\beta_{\text{equiv}}=\frac{1}{\sqrt{1-\eta^2}}
+```
+
+where:
+
+```math
+\eta=\frac{|W|}{|dx|}
+```
+
+---
+
+### V–W feasibility field
+
+```math
+D=|dx|
+```
+
+```math
+\eta=\frac{|W|}{D}
+```
+
+```math
+\beta=\frac{V}{c}
+```
+
+```math
+D_{\text{eff}}=D\sqrt{1-\eta^2}
+```
+
+```math
+t_{\text{sub-c}}=\frac{D_{\text{eff}}}{V}
+```
+
+The boundary curve is:
+
+```math
+\beta^2+\eta^2=1
+```
+
+The feasible sub-c shortcut region is:
+
+```math
+\beta^2+\eta^2>1,\qquad 0<\beta<1,\qquad 0<\eta<1
+```
+
+---
+
+## Region classification
+
+| Condition                 | Class                     | Meaning                          |
+| ------------------------- | ------------------------- | -------------------------------- |
+| `β²+η² < 1`               | `SUBC_TOO_SLOW`           | W and V are not enough           |
+| `β²+η² = 1`               | `EQUAL_TO_LIGHT_BASELINE` | arrives with the light baseline  |
+| `β²+η² > 1`, `β<1`, `η<1` | `SUBC_BEATS_LIGHT`        | local sub-c speed beats baseline |
+| `η = 1`                   | `KIDI_BOUNDARY`           | effective distance tends to zero |
+| `η > 1`                   | `NO_REAL_CORRIDOR`        | no real projected corridor       |
+| feedback contradiction    | `Bottom`                  | causal loop contradiction        |
+
+---
+
+## Panels
+
+| Panel                 | Purpose                                               |
+| --------------------- | ----------------------------------------------------- |
+| Controls              | phase, W/alpha, branch, speed, toggles, camera, tests |
+| Spacetime `(x,t)`     | Bob/Alice worldlines, signal path, light baseline     |
+| Alpha-plane `(x,α)`   | split boundary lines `α=±x`                           |
+| 3D Volume `(x,t,α)`   | Kidi planes, signal path, baseline, orbit camera      |
+| Projection Speed      | equivalent projected speed `β_equiv`                  |
+| V–W Correlation Field | feasibility map for `β²+η²>1`                         |
+| Diagnostics           | typed values, margins, domain labels                  |
+| Event Log             | state transitions and JSON export                     |
+
+---
+
+## Built-in demo
+
+Default scenario:
+
+```text
+Bob x = 0
+Alice x = 5
+send t = 2
+c = 1
+```
+
+| Phase    | W / α | Branch     | Result                         |
+| -------- | ----: | ---------- | ------------------------------ |
+| Ordinary |   `0` | `+`        | light baseline, arrival `t=7`  |
+| Shortcut |   `4` | `+`        | arrival `t=5`, before baseline |
+| Boundary |   `5` | `+`        | Kidi Boundary                  |
+| Paradox  | `√24` | `−`        | reverse arrival `t=1`          |
+| Feedback | `√24` | `−` + loop | `Bottom` contradiction         |
+
+V–W example:
+
+```text
+D = 5
+V = 0.8c
+W = 4
+```
+
+Then:
+
+```math
+\beta=0.8
+```
+
+```math
+\eta=0.8
+```
+
+```math
+\beta^2+\eta^2=1.28>1
+```
+
+So the classification is:
+
+```text
+SUBC_BEATS_LIGHT
+```
+
+But the local speed is still:
+
+```text
+V < c
+```
+
+The model beats the light baseline by reducing effective corridor distance, not by making local speed exceed `c`.
+
+---
+
+## Run locally
+
+### Offline standalone
+
+Open:
+
+```text
+standalone.html
+```
+
+If your browser blocks `file://`, run:
+
+```bash
+python -m http.server 8000
+```
+
+Then open:
+
+```text
+http://localhost:8000/standalone.html
+```
+
+---
+
+### Development mode
+
+```bash
+npm install
+npm run dev
+```
+
+Build:
+
+```bash
+npm run build
+```
+
+Run tests:
+
+```bash
+npm test
+```
+
+---
+
+### Rebuild standalone
 
 ```bash
 python build_standalone.py
 ```
 
-### B) Proper dev project (when Node is available)
+Optional verification:
 
 ```bash
-npm install
-npm run dev        # Vite dev server
-npm run build      # tsc --noEmit && vite build
-npm test           # Vitest — runs the WO acceptance criteria headlessly
-```
-
-### C) Verify without Node (optional)
-
-`verify.py` transpiles the whole bundle through the vendored Babel inside a small
-embedded JS engine, executes the real self-tests, and server-renders the full
-React tree:
-
-```bash
-pip install py_mini_racer
 python verify.py
 ```
 
-Latest result: **bundle transpiles clean · 24/24 self-tests pass · SSR renders all six panels.**
-
 ---
 
-## The six panels
+## Architecture
 
-| Panel | What it shows |
-|-------|---------------|
-| **Controls** | phases, α (slider + number), branch, close-loop, scenario, transport, **camera presets**, **3D layer toggles**, self-tests, help |
-| **Spacetime `(x,t)`** | Bob/Alice worldlines, light cone, signal path, reverse arrivals in red |
-| **Alpha-plane `(x,α)`** | split-complex null lines `α=±x`, teal/magenta wedges, pulsing boundary marker |
-| **3D Volume `(x,t,α)`** | orbit camera, singular planes `α=±x`, null surfaces from the send event, worldlines, signal path, slice shadows, hover/click linking |
-| **Diagnostics** | `Δ_split`, `Δ₅D`, `γ₅D`, domains, typed `dt_signal`, typed arrival, escalation order λ, contradictions + a plain-language summary |
-| **Event log** | colour-coded events, clickable (cross-panel linking), **Export JSON** |
+```text
+src/core/
+  singular.ts       typed Real / Singular / Bottom algebra
+  physics.ts        split-complex, signal laws, baseline, V-W field
+  simulation.ts     phases, diagnostics, events
+  geometry3d.ts     3D geometry helpers
+  projection.ts     screen/world projection helpers
+  schemas.ts        event/export schemas
+  export.ts         export utilities
+  selfTest.ts       built-in self-tests
 
----
+src/components/
+  TimeParadoxLab.tsx
+  ControlPanel.tsx
+  SpacetimeCanvas.tsx
+  AlphaPlaneCanvas.tsx
+  Volume3DView.tsx
+  ProjectionSpeedCanvas.tsx
+  VWCorrelationFieldPanel.tsx
+  DiagnosticsPanel.tsx
+  EventLog.tsx
 
-## Escalation ladder (state machine)
+vendor/
+  React, ReactDOM, Three.js, Babel for offline standalone mode
 
-```mermaid
-stateDiagram-v2
-  [*] --> Idle
-  Idle --> Real: Select phase / Send
-  Real --> Boundary: |dx² − dα²| <= eps
-  Real --> Reverse: branch == "-" && arrival < send
-  Boundary --> Reverse: reverse branch after boundary
-  Reverse --> Feedback: closeLoop == true
-  Feedback --> Bottom: contradiction preserved as typed Bottom
-  Real --> [*]
-  Boundary --> [*]
-  Reverse --> [*]
-  Bottom --> [*]
-```
+standalone.html
+  offline browser build
 
-```
-order 0   Real                          ordinary propagation
-order ½   BOUNDARY_TOUCH (Singular)      dx²=dα²  or  Δ₅D≈0
-order 1   REVERSE_ARRIVAL (Singular,−)   arrival before send (kept as data)
-⊥         FEEDBACK_CONTRADICTION         a reply closes a causal loop  →  Bottom
-```
-
-Contradictions are **preserved as data** (`Bottom`/`Singular`), never hidden or
-coerced to `∞`. `order` stays finite even at the contradiction; the `Bottom`
-value carries the escalation.
-
-## Architecture / data flow
-
-```mermaid
-flowchart LR
-  subgraph core[core/ pure TS]
-    S[singular.ts<br/>Real / Singular / Bottom]
-    P[physics.ts<br/>split-complex · 5D · signal]
-    M[simulation.ts<br/>phases · events]
-    G[geometry3d.ts]
-    C[camera.ts]
-    X[export.ts + schemas.ts]
-  end
-  S --> P --> M
-  M --> G & X
-  M --> UI
-  G --> V3[Volume3DView]
-  C --> V3
-  subgraph UI[components/ React]
-    CP[ControlPanel] --> TPL[TimeParadoxLab]
-    SC[SpacetimeCanvas] --> TPL
-    AP[AlphaPlaneCanvas] --> TPL
-    V3 --> TPL
-    DP[DiagnosticsPanel] --> TPL
-    EL[EventLog] --> TPL
-  end
-  X --> EL
+build_standalone.py
+  generates standalone.html
 ```
 
 ---
 
-## The model (three separated layers)
+## Data flow
 
-**1 — Geometry (split-complex):** `z = x + jα`, `j²=1`, norm `N(z)=x²−α²`; the
-inverse fails exactly on `α=±x` — a zero-divisor boundary locus.
-
-**2 — 5D diagnostic (speculative kinematics):**
-`u=dα/dt`, `Δ₅D = 1 − (v²−u²)/c²`, `γ₅D = 1/√Δ₅D` (order ½ as `Δ₅D→0`).
-
-**3 — Signal / paradox:** from `0 = c²dt² − dx² + dα²`,
-`|dt_signal| = √(max(0, dx² − dα²)) / c`. Both `+`/`−` branches are available; a
-`−` arrival before the send time is a reverse causal event.
-
-### 3D geometry (see `docs/diagrams/singular-volume.md`)
-
-- **Singular planes** `Π± : α = ±x`, ruled along `t` — translucent red meshes.
-- **Null surfaces** `(x−x_s)² − (α−α_s)² = (cτ)²` from the send event — two
-  triangulated sheets (always real, never NaN: `rad = (cτ)² + (α−α_s)² ≥ 0`).
-- **Signal path** send→arrival — a didactic aid, *not* a physical geodesic.
-
-### Typed values & JSON schema
-
-```ts
-Real(value)
-Singular(coeff, order, branch, reason)   // branch ∈ plain | + | − | loop | feedback | mixed
-Bottom(reason)
+```text
+Controls
+  -> Scenario / Phase / W / Branch / V
+  -> simulation.ts
+  -> physics.ts
+  -> typed diagnostics
+  -> panels + event log
 ```
 
-Events serialize to `EventLogExport` and validate against the schemas in
-`src/core/schemas.ts` (`sim-event.schema.json` etc.). A reverse-arrival fixture:
+Calculation and visualization are separated:
 
-```json
-{
-  "id": "evt-0003", "seq": 3, "type": "REVERSE_ARRIVAL", "level": "singular",
-  "phaseId": "paradox", "message": "Alice receives before Bob sends",
-  "scenario": { "xBob": 0, "xAlice": 5, "tSend": 2, "c": 1, "eps": 1e-6,
-                "alpha": 4.898979485566356, "branch": "-", "closeLoop": false },
-  "typedState": { "kind": "Singular", "coeff": 1, "order": 1, "branch": "-", "reason": "reverse arrival" },
-  "arrival": { "kind": "Real", "value": 1 },
-  "payload": { "send": [0,2,0], "arrival": [5,1,4.898979485566356], "deltaSignal": 1 }
-}
+```text
+core/        pure math and state transitions
+components/ React visualization
+vendor/     offline runtime libraries
 ```
 
 ---
 
-## Kidi Light-Speed Projection
+## Why the reduced model is enough
 
-A fourth panel turns the existing signal law into an **equivalent projected speed**.
-`c` stays a constant reference (drawn as the glowing `β = 1` plane — never a free
-coordinate); `W` is a **display alias** of the existing `α` axis.
+The broad theoretical frame may be written as:
 
-```
-deltaSignal = dx² − dW²
-v_equiv = c·|dx| / √deltaSignal      β_equiv = v_equiv/c = 1/√(1−η²)
-η = |dW|/|dx|        ρ = 1 − η² = deltaSignal/dx²
+```math
+(x,y,z,t,W)
 ```
 
-Classification is **tolerance-based** (never exact `dW=0` / `|dW|=|dx|`):
+But the V–W feasibility proof only needs:
 
-| condition | class | β_equiv |
-|---|---|---|
-| `|dx| ≤ ε` | `UNDEFINED_DX` | `Bottom` |
-| `η ≤ ηₘᵢₙ` | `LIGHT_SPEED` | `Real(1)` |
-| `ηₘᵢₙ < η < 1−tol` | `PROJECTED_SUPERLUMINAL` | `Real(>1)` |
-| `|η−1| ≤ tol` | `KIDI_BOUNDARY` | `Singular(|dx|, ½)` |
-| `η > 1+tol` | `W_DOMAIN_NO_REAL_DT` | `Singular(½)`, **not a real speed** |
-
-> The Kidi Light-Speed Projection panel does not claim verified real-world
-> faster-than-light travel. It shows an equivalent 3D projected speed inside the
-> simulator's speculative 5D null geometry. When the W/α component is nonzero but
-> still within the real projection domain, the projected speed can exceed c. When
-> |W| approaches |dx|, the model reaches a Kidi Boundary. When |W| exceeds |dx|,
-> the projected travel time is no longer real under this model.
-
-`Kidi` is the user-facing name for typed singular boundary states; the internal
-algebra stays `Singular` / `Bottom` for code stability.
-
-## Light-Speed Reference Baseline
-
-TimeParadoxLab renders an ordinary α=0 light-speed path from Bob to Alice:
-
-```
-dt_light = |dx|/c        t_light_arrival = t_send + |dx|/c
+```math
+(D,W,V,t)
 ```
 
-This baseline is **not a photon rest frame** and **not a new coordinate system**.
-It is a fixed comparison ruler. It lets users compare the ordinary light path
-against the current W/α path. It is drawn as a cyan dashed ray in the spacetime
-slice and on the α=0 plane in the 3D volume, and toggled with "Show light-speed
-baseline" (default on).
+or normalized:
 
-When the current W/α signal arrives earlier than the α=0 baseline, the app labels
-that as projected superluminal behavior inside the speculative model, not verified
-real-world faster-than-light travel.
-
-Per phase (Bob 0, Alice 5, send 2, c 1): ordinary α=0 → current overlaps baseline
-(t=7); shortcut α=4 → arrives 2 before baseline; boundary α=5 → Kidi Boundary while
-baseline stays t=7; paradox (−) → reverse arrival t=1 while the baseline stays
-forward-causal at t=7.
-
-## Reduced Kidi Corridor Feasibility Field (V–W Correlation)
-
-This module does **not** require the full 5D time-paradox layer (no negative time,
-no reverse branch, no feedback paradox). It is a reduced kinematic feasibility
-layer using `D, W, V, c, t`. The time-paradox module remains an optional advanced
-exploration layer.
-
-Can a *local* corridor speed below light speed still arrive before the ordinary α=0
-light baseline, because the W/α corridor shortens the effective distance? The
-**Kidi V–W Correlation Field** panel answers this continuously.
-
-```
-D = |dx|     η = |W|/D     β = V/c        (V is the local sub-c corridor speed)
-t_light  = D/c
-D_eff    = D·√(1−η²)
-t_sub-c  = D_eff/V = D·√(1−η²)/(βc)
+```math
+(\eta,\beta)
 ```
 
-The corridor beats the light baseline when `t_sub-c < t_light`, i.e.
+Therefore, the main Kidi corridor proof does not need negative time, reverse branch, or feedback paradox.
 
+The reduced model is enough to show:
+
+```math
+V<c
 ```
-β > √(1−η²)        ⇔        β² + η² > 1
+
+while:
+
+```math
+t_{\text{sub-c}}<t_{\text{light}}
 ```
 
-The panel plots η (x-axis) vs β (y-axis) with the boundary curve **β² + η² = 1**:
-below it is `SUBC_TOO_SLOW`, above it (β<1, η<1) is `SUBC_BEATS_LIGHT`, on it is
-`EQUAL_TO_LIGHT_BASELINE`; η=1 is the `KIDI_BOUNDARY`, η>1 is `NO_REAL_CORRIDOR`.
-The live (η, β) point moves with the W (α) and V (β_sub) controls.
+if:
 
-**Insight:** higher W lowers the required V, and higher V lowers the required W.
-For `D=5, V=0.8c`: `W=4` ⇒ β²+η²=1.28 ⇒ beats light (t_sub-c=3.75 < 5); `W=2` ⇒
-0.80 ⇒ too slow; `W=3` ⇒ exactly 1.0 ⇒ equal to the baseline.
+```math
+\beta^2+\eta^2>1
+```
 
-This does **not** claim matter exceeds light speed locally — V stays below c. The
-earlier arrival is the model's geometric shortening through the W/α corridor.
-
-## Keyboard & accessibility
-
-`Space` play/pause · `R` reset · `1–5` phases · `E` export JSON · `C` cycle camera
-· `L` history trails · `?` help · drag = orbit · shift/right-drag = pan · wheel =
-zoom · click marker / event = cross-panel select.
-
-Every slider has a numeric textbox twin; layers/events are focusable; the 3D scene
-has an `aria-label` and a live plain-language summary region; no meaning is
-conveyed by colour alone (state labels are always shown as text).
+The paradox module remains as an optional advanced layer for studying causal-loop behavior.
 
 ---
 
-## Built-in demo (Bob x=0, Alice x=5, send t=2, c=1)
+## Current project scope
 
-| Phase | α | branch | arrival | typed state |
-|-------|-----|--------|---------|-------------|
-| Ordinary | 0 | + | **t=7** | Real |
-| Mild shortcut | 4 | + | **t=5** | Real |
-| Boundary touch | 5 | + | t=2 | Singular(½) |
-| Paradox | √24 | − | **t=1** | Singular(1, −) |
-| Feedback | √24 | − (reply) | ⊥ | Bottom |
+TimeParadoxLab / Kidi is:
 
-All asserted by `src/core/selfTest.ts` (run from the UI, `npm test`, or `verify.py`).
+```text
+local-first
+frontend-only
+offline runnable
+browser based
+research visualization
+```
+
+It is not:
+
+```text
+a backend service
+a database app
+a real physics engine
+a verified FTL simulator
+a time-travel proof
+```
 
 ---
 
-## File map
+## Roadmap
 
+Possible future extensions:
+
+* Newton–Puiseux branch decomposition
+* theorem/derivation viewer
+* exportable simulation reports
+* GitHub Pages live demo
+* clearer educational mode
+* comparison between reduced model and full 5D framing
+* improved screenshots and diagrams
+* paper-style explanation
+
+---
+
+## Suggested repository description
+
+```text
+A local-first research visualization of typed Kidi singular states, alpha/W corridor geometry, light-baseline comparison, and V-W feasibility fields.
 ```
-src/core/    singular · physics · simulation · schemas · export · geometry3d ·
-             camera · projection · colorRules · useElementSize · selfTest
-src/components/  TimeParadoxLab + ControlPanel · SpacetimeCanvas · AlphaPlaneCanvas ·
-                 Volume3DView · VolumeLegend · LayerToggleGroup · HoverInspector ·
-                 HelpOverlay · DiagnosticsPanel · EventLog
-build_standalone.py   generates standalone.html from src/ (no Node)
-standalone.html       offline, double-clickable build
-vendor/               React · ReactDOM · Three.js · Babel (vendored, offline)
-docs/diagrams/        labeled 3D geometry diagram
-docs/screenshots/     drop UI screenshots here
-```
 
-## Scope
+---
 
-Local-first, frontend-only. No backend, database, or server-side engine. The 3D
-view augments — it does not replace — the 2D slices, which remain the most legible
-exact-reading views and the accessibility fallback. A future Newton–Puiseux branch
-decomposition module (per the uploaded note) is an intentional later extension.
-#   t i m e p a r a d o x l a b - k i d i  
- 
+## License
+
+No license is selected in this README.
+
+Before accepting outside contributions or encouraging reuse, add a `LICENSE` file such as MIT, Apache-2.0, or another license that matches the intended release strategy.
