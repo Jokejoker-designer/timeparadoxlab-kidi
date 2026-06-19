@@ -1,0 +1,5068 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>TimeParadoxLab — 5D Singularity Simulator (standalone)</title>
+<style>
+:root {
+  color-scheme: dark;
+  --bg: #070a11;
+  --panel: #0e1420;
+  --panel-2: #131b2b;
+  --border: #1e2840;
+  --text: #d6e2f5;
+  --muted: #8ea4c6;
+  --cyan: #3fd0ff;
+  --violet: #aa78ff;
+  --teal: #56e39f;
+  --magenta: #e23bd0;
+  --amber: #ffd23b;
+  --orange: #ff7a3b;
+  --red: #ff6b6b;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: radial-gradient(1200px 600px at 30% -10%, #101a2e 0%, var(--bg) 60%);
+  color: var(--text);
+  font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+  font-size: 13px;
+}
+
+.lab { width: min(100vw, 2200px); max-width: none; margin: 0 auto; padding: 14px clamp(14px, 1.4vw, 28px) 32px; }
+
+.lab-header {
+  display: flex; justify-content: space-between; align-items: flex-start; gap: 24px;
+  border-bottom: 1px solid var(--border); padding-bottom: 10px; margin-bottom: 14px;
+}
+.lab-header h1 { margin: 0; font-size: clamp(22px, 1.5vw, 32px); letter-spacing: 0.5px;
+  background: linear-gradient(90deg, var(--cyan), var(--violet)); -webkit-background-clip: text;
+  background-clip: text; color: transparent; }
+.subtitle { color: var(--muted); margin-top: 4px; font-family: ui-monospace, monospace; font-size: 12px; }
+.disclaimer { max-width: 520px; font-size: 11px; color: #a9b6d8; background: var(--panel);
+  border: 1px solid var(--border); border-left: 3px solid var(--amber); padding: 8px 10px; border-radius: 6px; }
+
+/* wide three-column dashboard: controls | main visuals | diagnostics */
+.lab-grid {
+  display: grid;
+  grid-template-columns: minmax(320px, 360px) minmax(560px, 1fr) minmax(300px, 380px);
+  gap: 16px; align-items: start;
+}
+@media (min-width: 1700px) {
+  .lab { width: calc(100vw - 32px); max-width: 2300px; }
+  .lab-grid { grid-template-columns: minmax(330px, 380px) minmax(680px, 1fr) minmax(330px, 410px); gap: 18px; }
+}
+@media (max-width: 1200px) {
+  .lab-grid { grid-template-columns: 1fr; }
+  .lab { width: 100%; padding: 12px; }
+}
+
+.panel { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 14px; margin-bottom: 14px; }
+.panel h3 { margin: 0 0 10px; font-size: 13px; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); }
+
+/* controls */
+.ctl-block { margin-bottom: 14px; padding-bottom: 12px; border-bottom: 1px dashed var(--border); }
+.ctl-block:last-child { border-bottom: none; margin-bottom: 0; }
+.ctl-title { font-size: 11px; color: var(--muted); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px; }
+.phase-buttons { display: flex; flex-direction: column; gap: 6px; }
+button { cursor: pointer; background: var(--panel-2); color: var(--text); border: 1px solid var(--border);
+  border-radius: 7px; padding: 7px 10px; font-size: 12px; transition: all 0.12s; font-family: inherit; }
+button:hover { border-color: var(--cyan); }
+button.phase { text-align: left; }
+button.phase.active { border-color: var(--cyan); background: #17263d; box-shadow: 0 0 0 1px var(--cyan) inset; }
+.phase-blurb { margin-top: 8px; font-size: 11px; color: #a9b6d8; line-height: 1.5; }
+input[type="range"] { width: 100%; accent-color: var(--cyan); }
+input[type="number"] { width: 64px; background: var(--panel-2); color: var(--text); border: 1px solid var(--border);
+  border-radius: 5px; padding: 3px 6px; margin-left: 5px; font-family: ui-monospace, monospace; }
+select { background: var(--panel-2); color: var(--text); border: 1px solid var(--border); border-radius: 5px;
+  padding: 3px 6px; margin-left: 5px; font-family: inherit; }
+.ctl-row { display: flex; gap: 14px; align-items: center; margin-top: 10px; flex-wrap: wrap; }
+.ctl-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.ctl-grid label, .ctl-row label { font-size: 11px; color: var(--muted); display: flex; align-items: center; }
+label.checkbox { gap: 5px; }
+.transport { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.speed { display: flex; flex-direction: column; font-size: 10px; color: var(--muted); flex: 1; min-width: 90px; }
+.test-btn { width: 100%; border-color: var(--teal); }
+.test-results { margin-top: 10px; font-family: ui-monospace, monospace; font-size: 10.5px; }
+.test-summary { font-weight: bold; padding: 5px 8px; border-radius: 5px; margin-bottom: 6px; }
+.test-summary.ok { background: rgba(86,227,159,0.12); color: var(--teal); }
+.test-summary.fail { background: rgba(255,107,107,0.12); color: var(--red); }
+.test-row { padding: 3px 0; line-height: 1.4; }
+.test-row.pass { color: #9fe8c4; }
+.test-row.fail { color: var(--red); }
+.test-detail { color: var(--muted); }
+
+/* center */
+.col-center { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+.slice-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+@media (max-width: 760px) { .slice-row { grid-template-columns: 1fr; } }
+.canvas-card { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 8px; min-width: 0; }
+canvas { background: #0a0e16; border: 1px solid var(--border); display: block; }
+
+/* panel head (shared) */
+.panel-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+.panel-head h3 { margin: 0; }
+.domain-pill { font-family: ui-monospace, monospace; font-size: 10.5px; font-weight: bold; }
+
+/* 3D volume */
+.volume-wrap { padding: 12px; min-width: 0; }
+.volume3d { display: flex; flex-direction: column; }
+.volume3d-canvas { width: 100%; overflow: hidden; border-radius: 10px; }
+.volume3d-hint { margin-top: 6px; font-size: 10.5px; color: var(--muted); font-family: ui-monospace, monospace; }
+.webgl-fallback { padding: 28px; color: var(--amber); background: #141a26; border: 1px dashed var(--border);
+  border-radius: 10px; font-size: 13px; }
+.webgl-fallback-sub { margin-top: 8px; color: var(--muted); font-size: 12px; }
+
+/* camera presets */
+.preset-buttons { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+button.preset { font-size: 11px; padding: 6px 8px; }
+button.preset.active { border-color: var(--violet); background: #1b1733; box-shadow: 0 0 0 1px var(--violet) inset; }
+
+/* layer toggles */
+.layer-toggles { border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; margin: 0; }
+.layer-toggles legend { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; padding: 0 4px; }
+.layer-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 5px 10px; }
+.layer-check { display: flex; align-items: center; gap: 5px; font-size: 11px; color: var(--text); }
+
+/* slider twins + misc controls */
+.slider-twin { display: flex; align-items: center; gap: 8px; }
+.slider-twin input[type="range"] { flex: 1; }
+.twin-label { font-size: 11px; color: var(--muted); }
+.phase-key { display: inline-block; min-width: 14px; padding: 0 3px; margin-right: 4px; border-radius: 3px;
+  background: #0a1422; border: 1px solid var(--border); font-size: 10px; color: var(--cyan); text-align: center; }
+.help-btn, .export-btn { font-size: 11px; padding: 4px 9px; border-radius: 6px; }
+.help-btn { border-color: var(--violet); }
+.export-btn { border-color: var(--teal); }
+.export-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* legend + hover inspector */
+.volume-legend { display: flex; flex-direction: column; gap: 5px; }
+.legend-row { display: grid; grid-template-columns: 14px 130px 1fr; gap: 8px; align-items: center; font-size: 10.5px; }
+.legend-swatch { width: 12px; height: 12px; border-radius: 3px; }
+.legend-label { color: var(--text); font-family: ui-monospace, monospace; }
+.legend-note { color: var(--muted); }
+.hover-inspector { font-family: ui-monospace, monospace; font-size: 11px; }
+.hover-line { padding: 3px 0; color: #c4d2ec; }
+.hover-line.selected { color: var(--amber); }
+.hover-label { color: var(--muted); }
+.sr-summary { margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--border); color: #a9b6d8; line-height: 1.5; }
+
+/* event log selected */
+.event-row { cursor: pointer; }
+.event-row.selected { box-shadow: 0 0 0 1px var(--cyan) inset; }
+
+/* help overlay */
+.help-overlay { position: fixed; inset: 0; background: rgba(4,7,12,0.7); display: flex;
+  align-items: center; justify-content: center; z-index: 50; }
+.help-card { background: var(--panel); border: 1px solid var(--border); border-radius: 12px;
+  padding: 20px 24px; max-width: 460px; width: 90%; }
+.help-head { display: flex; justify-content: space-between; align-items: center; }
+.help-card table { width: 100%; border-collapse: collapse; margin-top: 8px; font-size: 12px; }
+.help-card td { padding: 4px 6px; border-bottom: 1px solid rgba(30,40,64,0.5); }
+.help-card kbd { background: #0a1422; border: 1px solid var(--border); border-radius: 4px; padding: 1px 6px;
+  font-family: ui-monospace, monospace; color: var(--cyan); }
+.help-note { margin-top: 12px; font-size: 11px; color: var(--muted); line-height: 1.5; }
+.col-right { display: flex; flex-direction: column; }
+
+/* diagnostics */
+.diag-group { margin-bottom: 14px; }
+.diag-group-title { font-size: 10.5px; color: var(--cyan); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px; }
+.diag-row { display: flex; justify-content: space-between; gap: 10px; padding: 3px 0; font-family: ui-monospace, monospace; font-size: 11.5px; border-bottom: 1px solid rgba(30,40,64,0.5); }
+.diag-label { color: var(--muted); }
+.diag-val { text-align: right; }
+.diag-note { margin-top: 8px; font-size: 10.5px; color: #a9b6d8; line-height: 1.5;
+  border-left: 2px solid var(--cyan); padding-left: 8px; }
+.diag-warn { margin-top: 8px; font-size: 10.5px; color: #ffd9a0; line-height: 1.5;
+  background: rgba(226,59,208,0.10); border-left: 2px solid var(--magenta); padding: 6px 8px; border-radius: 4px; }
+
+/* projection-speed canvas spans the center width */
+.proj-card { padding: 8px; }
+.wlabel-toggle { font-size: 10.5px; color: var(--muted); margin: 4px 0 8px; }
+
+/* event log */
+.event-scroll { max-height: 230px; overflow-y: auto; font-family: ui-monospace, monospace; }
+.event-empty { color: var(--muted); font-size: 12px; padding: 8px; }
+.event-row { display: grid; grid-template-columns: 18px 130px 60px 1fr; gap: 8px; align-items: baseline;
+  padding: 5px 8px; border-left: 3px solid var(--border); margin-bottom: 4px; background: var(--panel-2);
+  border-radius: 0 5px 5px 0; font-size: 11px; }
+.event-icon { font-size: 13px; }
+.event-type { font-weight: bold; font-size: 10px; }
+.event-at { color: var(--muted); }
+.event-msg { color: #c4d2ec; line-height: 1.4; }
+
+.boot-error { color:#ff6b6b; padding:24px; white-space:pre-wrap; font-family:ui-monospace,monospace; }
+.booting { color:#8ea4c6; padding:24px; font-family:ui-monospace,monospace; }
+</style>
+</head>
+<body>
+<div id="root"><div class="booting">Compiling TimeParadoxLab in-browser (vendored Babel)…</div></div>
+
+<!-- vendored, offline: React + ReactDOM + Three.js + Babel standalone -->
+<script src="vendor/react.production.min.js"></script>
+<script src="vendor/react-dom.production.min.js"></script>
+<script src="vendor/three.min.js"></script>
+<script src="vendor/babel.min.js"></script>
+
+<!-- canonical TypeScript source (generated from src/) -->
+<script type="text/plain" id="appsrc">
+const { useState, useRef, useEffect, useMemo, useCallback } = React;
+
+// ===================== src/core/singular.ts =====================
+/**
+ * singular.ts — Typed singular-value algebra.
+ *
+ * Implements the value type recommended by the uploaded critique
+ * ("Rigorous Critique and Defense of the Singular-Coefficient Alpha-Axis Model",
+ * pp. 12–14): a tagged state machine, NOT a fake number system.
+ *
+ *     Real(r)
+ *     Singular(c, λ, b, reason)
+ *     Bottom(reason)
+ *
+ * The crucial discipline (critique p.1, p.5): there is no honest ring element K
+ * with 0·K = 1. So a division-by-zero / boundary event is recorded as a *labelled
+ * singular object* produced by an external operator D0(a)=a#, graded by singular
+ * order λ. We never coerce a singularity into ∞ or pretend 1/0 is a number.
+ *
+ * Arithmetic mirrors the "computational form of the graded singular algebra"
+ * (critique p.13):   (a σ^λ)(b σ^μ) = ab σ^(λ+μ).
+ */
+
+/**
+ * Branch label b. '+'/'−' identify which null sheet / causal branch was hit
+ * (critique p.12: "attach a branch b∈{+,−}"). The extra labels are richer
+ * visualization/escalation tags used by the 3D layer and event export:
+ *   loop     — a closed causal loop was attempted
+ *   feedback — a feedback/reply event
+ *   mixed    — metadata from incompatible branches was combined
+ */
+type Branch = 'plain' | '+' | '-' | 'loop' | 'feedback' | 'mixed';
+
+/** A value flowing through the simulator. */
+type SingularValue =
+  | Real
+  | Singular
+  | Bottom;
+
+interface Real {
+  readonly kind: 'Real';
+  readonly value: number;
+}
+
+interface Singular {
+  readonly kind: 'Singular';
+  /** coefficient c — the preserved numerator information */
+  readonly coeff: number;
+  /** singular order λ (0 = regular, 1/2 = sqrt/Lorentz singularity, 1 = simple pole, …) */
+  readonly order: number;
+  /** branch label */
+  readonly branch: Branch;
+  /** human-readable reason the singular tag was created */
+  readonly reason: string;
+}
+
+interface Bottom {
+  readonly kind: 'Bottom';
+  /** why the computation became structurally indeterminate */
+  readonly reason: string;
+}
+
+// --- constructors -----------------------------------------------------------
+
+const Real = (value: number): Real => ({ kind: 'Real', value });
+
+const Singular = (
+  coeff: number,
+  order: number,
+  branch: Branch = 'plain',
+  reason = '',
+): Singular => ({ kind: 'Singular', coeff, order, branch, reason });
+
+const Bottom = (reason: string): Bottom => ({ kind: 'Bottom', reason });
+
+// --- predicates -------------------------------------------------------------
+
+const isReal = (v: SingularValue): v is Real => v.kind === 'Real';
+const isSingular = (v: SingularValue): v is Singular => v.kind === 'Singular';
+const isBottom = (v: SingularValue): v is Bottom => v.kind === 'Bottom';
+
+// --- branch merge -----------------------------------------------------------
+
+/**
+ * merge(b, d): combining metadata. plain is the identity; '+' and '-' are
+ * incompatible and produce Bottom (critique p.13: "mixing incompatible branch
+ * metadata … becomes Bottom") — signalled by returning null. Other mismatched
+ * non-plain labels combine into the 'mixed' tag rather than collapsing.
+ */
+function mergeBranch(b: Branch, d: Branch): Branch | null {
+  if (b === 'plain') return d;
+  if (d === 'plain') return b;
+  if (b === d) return b;
+  // the two causal null sheets are genuinely incompatible
+  if ((b === '+' && d === '-') || (b === '-' && d === '+')) return null;
+  return 'mixed';
+}
+
+// --- arithmetic (graded singular algebra) -----------------------------------
+
+/** Real(a) + Real(b) = Real(a+b); singular orders combine by domination near the
+ *  boundary (higher λ wins); incompatible branches ⇒ Bottom. */
+function add(x: SingularValue, y: SingularValue): SingularValue {
+  if (isBottom(x)) return x;
+  if (isBottom(y)) return y;
+
+  if (isReal(x) && isReal(y)) return Real(x.value + y.value);
+
+  // Real + Singular: the singular σ^λ term dominates the regular σ^0 term
+  // as we approach the boundary, so the singular tag survives.
+  if (isReal(x) && isSingular(y)) return y;
+  if (isSingular(x) && isReal(y)) return x;
+
+  // Singular + Singular
+  if (isSingular(x) && isSingular(y)) {
+    const branch = mergeBranch(x.branch, y.branch);
+    if (branch === null) {
+      return Bottom(`incompatible branches ${x.branch} + ${y.branch}`);
+    }
+    if (x.order === y.order) {
+      return Singular(x.coeff + y.coeff, x.order, branch, x.reason || y.reason);
+    }
+    // dominant (more singular) term survives
+    const dom = x.order > y.order ? x : y;
+    return Singular(dom.coeff, dom.order, branch, dom.reason);
+  }
+  return Bottom('unhandled add');
+}
+
+/** Multiplication: (a σ^λ)(b σ^μ) = ab σ^(λ+μ); branches merge. */
+function mul(x: SingularValue, y: SingularValue): SingularValue {
+  if (isBottom(x)) return x;
+  if (isBottom(y)) return y;
+
+  if (isReal(x) && isReal(y)) return Real(x.value * y.value);
+
+  if (isReal(x) && isSingular(y)) {
+    return Singular(x.value * y.coeff, y.order, y.branch, y.reason);
+  }
+  if (isSingular(x) && isReal(y)) {
+    return Singular(x.coeff * y.value, x.order, x.branch, x.reason);
+  }
+  if (isSingular(x) && isSingular(y)) {
+    const branch = mergeBranch(x.branch, y.branch);
+    if (branch === null) {
+      return Bottom(`incompatible branches ${x.branch} · ${y.branch}`);
+    }
+    return Singular(x.coeff * y.coeff, x.order + y.order, branch, x.reason || y.reason);
+  }
+  return Bottom('unhandled mul');
+}
+
+/**
+ * Division with singular bookkeeping — the heart of the model.
+ *
+ *   a / 0  with a ≠ 0  ⇒  Singular(a, 1, plain, "a/0")          (simple pole, order 1)
+ *   0 / 0              ⇒  Bottom("0/0 indeterminate")
+ *   a / b  with b ≠ 0  ⇒  Real(a/b)
+ *
+ * `eps` is the boundary tolerance for "denominator ≈ 0".
+ * This realises D0(a)=a# WITHOUT asserting 0·a# = a (critique pp.2,5).
+ */
+function divide(a: SingularValue, b: SingularValue, eps = 1e-12): SingularValue {
+  if (isBottom(a)) return a;
+  if (isBottom(b)) return b;
+  if (!isReal(a) || !isReal(b)) {
+    // keep the prototype's arithmetic in the Real layer; singular ÷ singular is
+    // out of scope and flagged rather than guessed.
+    return Bottom('non-Real division operand');
+  }
+  const denom = b.value;
+  if (Math.abs(denom) <= eps) {
+    if (Math.abs(a.value) <= eps) return Bottom('0/0 indeterminate');
+    return Singular(a.value, 1, 'plain', `${a.value}/0 — division by zero`);
+  }
+  return Real(a.value / denom);
+}
+
+// --- rendering --------------------------------------------------------------
+
+/** Compact human-readable form, e.g. "Real(2.000)", "Singular(5·σ^0.5, +)", "⊥". */
+function format(v: SingularValue): string {
+  switch (v.kind) {
+    case 'Real':
+      return `Real(${fmtNum(v.value)})`;
+    case 'Singular': {
+      const ord = v.order === 0.5 ? '½' : String(v.order);
+      const br = v.branch === 'plain' ? '' : `, ${v.branch}`;
+      return `Singular(${fmtNum(v.coeff)}·σ^${ord}${br})`;
+    }
+    case 'Bottom':
+      return `⊥ (${v.reason})`;
+  }
+}
+
+function fmtNum(n: number): string {
+  if (!Number.isFinite(n)) return String(n);
+  if (Number.isInteger(n)) return n.toString();
+  return n.toFixed(3);
+}
+
+
+// ===================== src/core/physics.ts =====================
+/**
+ * physics.ts — the three model layers, kept strictly separate.
+ *
+ *  (1) GEOMETRY LAYER  — split-complex plane  z = x + jα,  j² = 1
+ *        norm  N(z) = x² − α²            (critique p.7)
+ *        inverse fails on the null set  x² − α² = 0  ⇔  α = ±x
+ *        This is a zero-divisor *boundary locus*, NOT 1/0.
+ *
+ *  (2) 5D DIAGNOSTIC LAYER — speculative kinematics for worldlines
+ *        ds² = c²dt² − dx² − dy² − dz² + dα²       (two timelike directions!)
+ *        u = dα/dt,  Δ₅D = 1 − (v² − u²)/c²,  γ₅D = 1/√Δ₅D   (critique p.9)
+ *        Presented as a property of the ALTERED model, not standard SR.
+ *
+ *  (3) SIGNAL / PARADOX LAYER — see simulation.ts
+ *        prototype null rule  0 = c²dt² − dx² + dα²
+ *        ⇒ |dt_signal| = √(max(0, dx² − dα²)) / c
+ *
+ * NON-GOAL: this is a research visualisation, not a claim of verified physics.
+ */
+
+
+
+// --- domain classification --------------------------------------------------
+
+type Domain = 'REAL_DOMAIN' | 'SINGULAR_BOUNDARY' | 'ALPHA_DOMAIN';
+
+/**
+ * classifyDomain(Δ, ε) (critique p.13):
+ *   Δ >  ε  ⇒ REAL_DOMAIN
+ *  |Δ| ≤ ε  ⇒ SINGULAR_BOUNDARY
+ *   Δ < −ε  ⇒ ALPHA_DOMAIN
+ */
+function classifyDomain(delta: number, eps: number): Domain {
+  if (delta > eps) return 'REAL_DOMAIN';
+  if (delta < -eps) return 'ALPHA_DOMAIN';
+  return 'SINGULAR_BOUNDARY';
+}
+
+// =============================================================================
+// (1) GEOMETRY LAYER — split-complex numbers
+// =============================================================================
+
+interface SplitComplex {
+  x: number;
+  alpha: number;
+}
+
+/** norm N(z) = x² − α²  =  Δ_split */
+function splitNorm(z: SplitComplex): number {
+  return z.x * z.x - z.alpha * z.alpha;
+}
+
+/** conjugate z̄ = x − jα */
+function splitConjugate(z: SplitComplex): SplitComplex {
+  return { x: z.x, alpha: -z.alpha };
+}
+
+/**
+ * Split-complex inverse z⁻¹ = z̄ / N(z) — but tagged.
+ * On the null set N(z)=0 the inverse genuinely fails: we return a Singular tag
+ * (order ½, because it is a zero-divisor square-root-type boundary, and we record
+ * which null sheet α=±x was approached) rather than a fake number.
+ */
+function splitInverse(z: SplitComplex, eps: number): {
+  norm: number;
+  domain: Domain;
+  value: { re: SingularValue; jcoeff: SingularValue };
+} {
+  const N = splitNorm(z);
+  const domain = classifyDomain(N, eps);
+  if (domain === 'SINGULAR_BOUNDARY') {
+    const branch: Branch = z.alpha >= 0 ? '+' : '-';
+    const tag = Singular(1, 0.5, branch, `split null set x²−α²=0 (α=${branch === '+' ? '+x' : '-x'})`);
+    return { norm: N, domain, value: { re: tag, jcoeff: tag } };
+  }
+  // re part = x/N, j part = −α/N  (z̄ / N)
+  return {
+    norm: N,
+    domain,
+    value: { re: Real(z.x / N), jcoeff: Real(-z.alpha / N) },
+  };
+}
+
+/** Which null sheet a point is nearest to: α=+x ('+') or α=−x ('−'). */
+function nullSheet(z: SplitComplex): Branch {
+  const dPlus = Math.abs(z.alpha - z.x);
+  const dMinus = Math.abs(z.alpha + z.x);
+  return dPlus <= dMinus ? '+' : '-';
+}
+
+// =============================================================================
+// (2) 5D DIAGNOSTIC LAYER
+// =============================================================================
+
+interface Kinematics {
+  /** ordinary 3-speed magnitude v = |dr/dt| */
+  v: number;
+  /** alpha-velocity u = dα/dt */
+  u: number;
+  /** light speed */
+  c: number;
+}
+
+/** Δ₅D = 1 − (v² − u²)/c²  (critique p.12) */
+function delta5D(k: Kinematics): number {
+  return 1 - (k.v * k.v - k.u * k.u) / (k.c * k.c);
+}
+
+/**
+ * γ₅D = 1/√Δ₅D, returned as a typed value (critique p.6: γ ∼ Δ^(−1/2), order ½).
+ *   Δ >  ε  ⇒ Real(1/√Δ)
+ *  |Δ| ≤ ε  ⇒ Singular(coeff, ½) — Lorentz-type boundary
+ *   Δ < −ε  ⇒ Singular(…, ½, branch) — γ would be imaginary (deep alpha domain)
+ */
+function gamma5D(k: Kinematics, eps: number): {
+  delta: number;
+  domain: Domain;
+  gamma: SingularValue;
+} {
+  const d = delta5D(k);
+  const domain = classifyDomain(d, eps);
+  if (domain === 'REAL_DOMAIN') {
+    return { delta: d, domain, gamma: Real(1 / Math.sqrt(d)) };
+  }
+  if (domain === 'SINGULAR_BOUNDARY') {
+    return {
+      delta: d,
+      domain,
+      gamma: Singular(1, 0.5, 'plain', 'v²−u²=c² → Δ₅D=0, γ diverges (order ½)'),
+    };
+  }
+  // Δ < 0: γ = 1/√(negative) is imaginary — superluminal-in-projection.
+  const coeff = 1 / Math.sqrt(Math.abs(d));
+  return {
+    delta: d,
+    domain,
+    gamma: Singular(coeff, 0.5, '-', 'Δ₅D<0 → imaginary dilation (alpha domain)'),
+  };
+}
+
+// =============================================================================
+// (3) SIGNAL PROPAGATION LAYER
+// =============================================================================
+
+interface SignalSetup {
+  /** sender position on x-axis */
+  xSender: number;
+  /** receiver position on x-axis */
+  xReceiver: number;
+  /** coordinate time the signal is emitted */
+  tSend: number;
+  /** alpha-phase the signal travels through */
+  alpha: number;
+  /** light speed */
+  c: number;
+  /** causal branch to realise: '+' forward, '-' reverse */
+  branch: Branch;
+}
+
+interface SignalResult {
+  /** spatial separation dx = xReceiver − xSender */
+  dx: number;
+  /** alpha displacement dα = alpha */
+  dAlpha: number;
+  /** the split-style invariant for the signal: dx² − dα² */
+  underRoot: number;
+  /** classification of underRoot */
+  domain: Domain;
+  /** |dt_signal| as a typed value */
+  dtSignal: SingularValue;
+  /** arrival coordinate time as a typed value (tSend ± dt) */
+  tArrive: SingularValue;
+  /** true when a '-' branch lands strictly before tSend → reverse causal event */
+  reverse: boolean;
+  /** singular order λ describing escalation (0, ½, 1, …) */
+  order: number;
+}
+
+/**
+ * Projected signal travel time from the null condition of the (x,t,α) subspace:
+ *
+ *     0 = c²dt² − dx² + dα²   ⇒   |dt_signal| = √(max(0, dx² − dα²)) / c
+ *
+ * Recovers the ordinary case at α=0, shortens travel as α grows, and hits a
+ * singular boundary when dx² = dα². Beyond it (dα² > dx²) the projected interval
+ * is imaginary and we keep it as a Singular tag rather than discarding it.
+ */
+function propagateSignal(s: SignalSetup, eps: number): SignalResult {
+  const dx = s.xReceiver - s.xSender;
+  const dAlpha = s.alpha;
+  const underRoot = dx * dx - dAlpha * dAlpha;
+  const domain = classifyDomain(underRoot, eps);
+  const sign = s.branch === '-' ? -1 : 1;
+
+  let dtSignal: SingularValue;
+  let order: number;
+
+  if (domain === 'REAL_DOMAIN') {
+    const dt = Math.sqrt(underRoot) / s.c;
+    dtSignal = Real(dt);
+    order = 0;
+  } else if (domain === 'SINGULAR_BOUNDARY') {
+    // dx² = dα²: light-cone-like boundary in projection — sqrt singularity.
+    dtSignal = Singular(0, 0.5, s.branch, 'dx²=dα²: projected null boundary (order ½)');
+    order = 0.5;
+  } else {
+    // dα² > dx²: imaginary projected interval — deep alpha / paradox domain.
+    const mag = Math.sqrt(-underRoot) / s.c;
+    dtSignal = Singular(mag, 0.5, s.branch, 'dα²>dx²: imaginary projected interval');
+    order = 0.5;
+  }
+
+  // arrival time tSend ± dt
+  let tArrive: SingularValue;
+  let reverse = false;
+  if (dtSignal.kind === 'Real') {
+    const ta = s.tSend + sign * dtSignal.value;
+    tArrive = Real(ta);
+    if (sign < 0 && ta < s.tSend - eps) {
+      reverse = true;
+      order = Math.max(order, 1); // promote: reverse-arrival paradox is order 1
+    }
+  } else if (dtSignal.kind === 'Singular') {
+    // boundary / imaginary interval: arrival itself is singular
+    const ta = s.tSend + sign * dtSignal.coeff;
+    tArrive = Singular(ta, dtSignal.order, dtSignal.branch, 'singular arrival time');
+    if (sign < 0) {
+      reverse = true;
+      order = Math.max(order, 1);
+    }
+  } else {
+    tArrive = dtSignal; // Bottom
+  }
+
+  return { dx, dAlpha, underRoot, domain, dtSignal, tArrive, reverse, order };
+}
+
+// =============================================================================
+// (4) KIDI LIGHT-SPEED PROJECTION — equivalent projected speed observable
+// =============================================================================
+//
+// Built ENTIRELY from the existing signal law; c stays a constant reference, the
+// W axis is a display alias of the existing alpha coordinate.
+//
+//   deltaSignal = dx^2 - dW^2
+//   |dt_signal| = sqrt(deltaSignal) / c           (real domain)
+//   v_equiv     = |dx| / |dt_signal| = c|dx| / sqrt(deltaSignal)
+//   beta_equiv  = v_equiv / c = |dx| / sqrt(deltaSignal) = 1 / sqrt(rho)
+//   eta = |dW| / |dx|,   rho = deltaSignal / dx^2 = 1 - eta^2
+//
+// "v_equiv" is the equivalent ordinary 3D speed that would reproduce the same
+// arrival time WITHOUT the W/alpha path. beta_equiv > 1 is a *projection*
+// statement inside the speculative model, NOT a claim of verified physical FTL.
+
+type ProjectionClass =
+  | 'LIGHT_SPEED'
+  | 'PROJECTED_SUPERLUMINAL'
+  | 'KIDI_BOUNDARY'
+  | 'W_DOMAIN_NO_REAL_DT'
+  | 'UNDEFINED_DX';
+
+interface ProjectionSpeedResult {
+  dx: number;
+  /** display alias of the alpha displacement */
+  dW: number;
+  c: number;
+  deltaSignal: number; // dx^2 - dW^2
+  eta: number; // |dW| / |dx|
+  rho: number; // deltaSignal / dx^2
+  betaEquiv: SingularValue;
+  vEquiv: SingularValue;
+  className: ProjectionClass;
+  /** true only in LIGHT_SPEED / PROJECTED_SUPERLUMINAL (dt_signal real & nonzero) */
+  isRealProjection: boolean;
+  /** for the non-real W domain: √|Δ_signal|/c — NOT a real speed */
+  imaginaryMagnitude?: number;
+  warning?: string;
+}
+
+interface ProjectionSpeedArgs {
+  dx: number;
+  dW: number; // display alias of alpha displacement
+  c: number;
+  eps?: number;
+  branch?: Branch;
+}
+
+/**
+ * Equivalent projected-speed observable (PATCHED, tolerance-based classification).
+ *
+ * `Kidi` is the user-facing name for typed singular boundary states; the internal
+ * algebra remains Singular / Bottom for code stability. Classification uses
+ * tolerances (never exact `dW===0` / `|dW|===|dx|`):
+ *
+ *   dxAbs <= epsSafe          → UNDEFINED_DX          (checked BEFORE dividing)
+ *   eta <= etaMin             → LIGHT_SPEED           (β=1)
+ *   etaMin < eta < 1-tol      → PROJECTED_SUPERLUMINAL (β>1, real)
+ *   |eta-1| <= tol            → KIDI_BOUNDARY         (Singular, order ½)
+ *   eta > 1+tol               → W_DOMAIN_NO_REAL_DT   (typed, NOT a real speed, NOT ∞)
+ */
+function computeProjectionSpeed(args: ProjectionSpeedArgs): ProjectionSpeedResult {
+  const { dx, dW, c } = args;
+  const epsSafe = Math.max(args.eps ?? 1e-9, 1e-9);
+  const branch = args.branch ?? 'plain';
+
+  const dxAbs = Math.abs(dx);
+  const dWAbs = Math.abs(dW);
+  const deltaSignal = dx * dx - dW * dW;
+
+  // dx ≈ 0 must be checked BEFORE computing eta (avoid divide-by-zero)
+  if (dxAbs <= epsSafe) {
+    return {
+      dx, dW, c, deltaSignal,
+      eta: NaN, rho: NaN,
+      betaEquiv: Bottom('dx≈0 makes projected speed undefined'),
+      vEquiv: Bottom('dx≈0 makes projected speed undefined'),
+      className: 'UNDEFINED_DX',
+      isRealProjection: false,
+      warning: 'Projected speed is undefined because dx≈0.',
+    };
+  }
+
+  const eta = dWAbs / dxAbs;
+  const rho = deltaSignal / (dxAbs * dxAbs);
+  const etaMin = Math.max(1e-6, epsSafe / dxAbs);
+  const boundaryTol = Math.max(1e-6, epsSafe / dxAbs);
+  const base = { dx, dW, c, deltaSignal, eta, rho };
+
+  if (eta <= etaMin) {
+    return { ...base, betaEquiv: Real(1), vEquiv: Real(c), className: 'LIGHT_SPEED', isRealProjection: true };
+  }
+
+  if (eta < 1 - boundaryTol) {
+    const beta = dxAbs / Math.sqrt(deltaSignal);
+    return {
+      ...base,
+      betaEquiv: Real(beta),
+      vEquiv: Real(c * beta),
+      className: 'PROJECTED_SUPERLUMINAL',
+      isRealProjection: true,
+    };
+  }
+
+  if (Math.abs(eta - 1) <= boundaryTol) {
+    return {
+      ...base,
+      betaEquiv: Singular(dxAbs, 0.5, branch, 'β_equiv reaches Kidi Boundary: |dW|≈|dx|'),
+      vEquiv: Singular(c * dxAbs, 0.5, branch, 'v_equiv reaches Kidi Boundary: |dW|≈|dx|'),
+      className: 'KIDI_BOUNDARY',
+      isRealProjection: false,
+      warning: 'Projected travel time approaches zero at the Kidi Boundary.',
+    };
+  }
+
+  // eta > 1+tol : no real projected travel time — typed, but NOT a real speed and NOT ∞
+  return {
+    ...base,
+    betaEquiv: Singular(dxAbs, 0.5, branch, 'β_equiv is outside the real projected domain: |dW|>|dx|'),
+    vEquiv: Singular(c * dxAbs, 0.5, branch, 'v_equiv is outside the real projected domain: |dW|>|dx|'),
+    className: 'W_DOMAIN_NO_REAL_DT',
+    isRealProjection: false,
+    imaginaryMagnitude: Math.sqrt(Math.abs(deltaSignal)) / c,
+    warning: 'No real projected travel time exists for |dW|>|dx|.',
+  };
+}
+
+// =============================================================================
+// (5) LIGHT-SPEED REFERENCE BASELINE — the ordinary α=0 comparison ray
+// =============================================================================
+//
+// NOT a photon rest frame and NOT a new coordinate: a fixed comparison ruler.
+// It is always the α=0 special case of the existing signal law:
+//   |dt_light| = √(dx²) / c = |dx| / c,   t_light_arrival = t_send + |dx|/c.
+
+interface LightBaselineResult {
+  dx: number;
+  c: number;
+  tSend: number;
+  dtLight: SingularValue;
+  tLightArrival: SingularValue;
+  /** β of the baseline — always 1 in the valid (real) case */
+  beta: number;
+  label: 'LIGHT_SPEED_BASELINE' | 'UNDEFINED_BASELINE';
+  warning?: string;
+}
+
+function computeLightBaseline(args: {
+  xSender: number;
+  xReceiver: number;
+  tSend: number;
+  c: number;
+  eps?: number;
+}): LightBaselineResult {
+  const epsSafe = Math.max(args.eps ?? 1e-9, 1e-9);
+  const dx = args.xReceiver - args.xSender;
+  const dxAbs = Math.abs(dx);
+
+  if (Math.abs(args.c) <= epsSafe) {
+    return {
+      dx,
+      c: args.c,
+      tSend: args.tSend,
+      dtLight: Bottom('c≈0 makes light baseline undefined'),
+      tLightArrival: Bottom('c≈0 makes light baseline undefined'),
+      beta: NaN,
+      label: 'UNDEFINED_BASELINE',
+      warning: 'Light-speed baseline is undefined because c≈0.',
+    };
+  }
+
+  const dt = dxAbs / args.c;
+  return {
+    dx,
+    c: args.c,
+    tSend: args.tSend,
+    dtLight: Real(dt),
+    tLightArrival: Real(args.tSend + dt),
+    beta: 1,
+    label: 'LIGHT_SPEED_BASELINE',
+  };
+}
+
+// =============================================================================
+// (6) REDUCED KIDI CORRIDOR - V-W CORRELATION FIELD (core feasibility proof)
+// =============================================================================
+//
+// Reduced feasibility layer (no 5D / negative time / reverse branch needed):
+// can a *local* speed V < c still arrive before the ordinary alpha=0 light
+// baseline, because the W/alpha corridor shortens the effective distance?
+//
+//   D = |dx|,  eta = |W|/D,  beta = V/c
+//   D_eff   = sqrt(D^2 - W^2) = D*sqrt(1 - eta^2)
+//   t_light = D/c            t_sub-c = D_eff/V = D*sqrt(1-eta^2)/(beta*c)
+//   beats light  <=>  t_sub-c < t_light  <=>  beta^2 + eta^2 > 1   (0<beta<1, 0<eta<1)
+//
+// NOT a claim of verified physical FTL: V stays below c; the earlier arrival is a
+// geometric corridor shortening inside the speculative model.
+
+type VWCorrelationClass =
+  | 'SUBC_TOO_SLOW'
+  | 'EQUAL_TO_LIGHT_BASELINE'
+  | 'SUBC_BEATS_LIGHT'
+  | 'KIDI_BOUNDARY'
+  | 'NO_REAL_CORRIDOR'
+  | 'LIGHT_SPEED_LIMIT'
+  | 'INVALID_INPUT';
+
+interface VWCorrelationResult {
+  dx: number;
+  D: number;
+  W: number;
+  WAbs: number;
+  V: number;
+  c: number;
+  eta: number;
+  beta: number;
+  fieldScore: number;
+  boundaryValue: number;
+  margin: number;
+  betaThreshold: number;
+  etaThreshold: number;
+  effectiveDistance: SingularValue;
+  dtLight: SingularValue;
+  dtSubC: SingularValue;
+  tSend: number;
+  tLightArrival: SingularValue;
+  tSubCArrival: SingularValue;
+  gainVsLight: SingularValue;
+  className: VWCorrelationClass;
+  beatsLight: boolean;
+  isSubC: boolean;
+  isRealCorridor: boolean;
+  message: string;
+  warning?: string;
+}
+
+function computeVWCorrelationField(args: {
+  dx: number;
+  W: number;
+  V: number;
+  c: number;
+  tSend?: number;
+  eps?: number;
+  branch?: Branch;
+}): VWCorrelationResult {
+  const epsSafe = Math.max(args.eps ?? 1e-9, 1e-9);
+  const branch = args.branch ?? 'plain';
+  const tSend = args.tSend ?? 0;
+  const D = Math.abs(args.dx);
+  const WAbs = Math.abs(args.W);
+  const { V, c } = args;
+
+  if (D <= epsSafe || c <= epsSafe || V <= epsSafe) {
+    const b = Bottom('invalid D, c, or V');
+    return {
+      dx: args.dx, D, W: args.W, WAbs, V, c,
+      eta: NaN, beta: NaN, fieldScore: NaN, boundaryValue: 1, margin: NaN,
+      betaThreshold: NaN, etaThreshold: NaN,
+      effectiveDistance: b, dtLight: b, dtSubC: b, tSend,
+      tLightArrival: b, tSubCArrival: b, gainVsLight: b,
+      className: 'INVALID_INPUT', beatsLight: false, isSubC: false, isRealCorridor: false,
+      message: 'Invalid input: D, c, and V must be positive.',
+      warning: 'Invalid input for V-W correlation field.',
+    };
+  }
+
+  const eta = WAbs / D;
+  const beta = V / c;
+  const fieldScore = beta * beta + eta * eta;
+  const margin = fieldScore - 1;
+  const boundaryTol = Math.max(1e-6, epsSafe / D);
+  const marginTol = Math.max(1e-6, epsSafe / D);
+  const betaThreshold = eta < 1 ? Math.sqrt(Math.max(0, 1 - eta * eta)) : NaN;
+  const etaThreshold = beta < 1 ? Math.sqrt(Math.max(0, 1 - beta * beta)) : NaN;
+  const dtLightValue = D / c;
+  const tLightArrivalValue = tSend + dtLightValue;
+  const fieldBase = {
+    dx: args.dx, D, W: args.W, WAbs, V, c, eta, beta, fieldScore, boundaryValue: 1, margin,
+    betaThreshold, etaThreshold, tSend,
+  };
+
+  if (eta > 1 + boundaryTol) {
+    const mag = Math.sqrt(Math.abs(D * D - WAbs * WAbs));
+    return {
+      ...fieldBase,
+      effectiveDistance: Singular(mag, 0.5, branch, 'No real Kidi corridor for |W|>|dx|'),
+      dtLight: Real(dtLightValue),
+      dtSubC: Singular(mag / V, 0.5, branch, 'No real sub-c corridor time for |W|>|dx|'),
+      tLightArrival: Real(tLightArrivalValue),
+      tSubCArrival: Singular(tSend, 0.5, branch, 'No real sub-c corridor arrival'),
+      gainVsLight: Singular(dtLightValue, 0.5, branch, 'No real gain outside real corridor'),
+      className: 'NO_REAL_CORRIDOR', beatsLight: false, isSubC: beta < 1, isRealCorridor: false,
+      message: 'No real corridor: |W| exceeds D.',
+      warning: 'Do not interpret this as faster-than-light. The projected corridor is non-real.',
+    };
+  }
+
+  if (Math.abs(eta - 1) <= boundaryTol) {
+    return {
+      ...fieldBase, betaThreshold: 0,
+      effectiveDistance: Singular(0, 0.5, branch, 'Kidi Boundary: effective corridor distance -> 0'),
+      dtLight: Real(dtLightValue),
+      dtSubC: Singular(0, 0.5, branch, 'Kidi Boundary: sub-c corridor time -> 0'),
+      tLightArrival: Real(tLightArrivalValue),
+      tSubCArrival: Singular(tSend, 0.5, branch, 'Kidi Boundary arrival is typed, not zero-time travel'),
+      gainVsLight: Singular(dtLightValue, 0.5, branch, 'Gain reaches Kidi Boundary'),
+      className: 'KIDI_BOUNDARY', beatsLight: false, isSubC: beta < 1, isRealCorridor: false,
+      message: 'Kidi Boundary: effective distance tends to zero.',
+      warning: 'Do not display as ordinary finite-speed travel.',
+    };
+  }
+
+  const effectiveDistanceValue = Math.sqrt(D * D - WAbs * WAbs);
+  const dtSubCValue = effectiveDistanceValue / V;
+  const tSubCArrivalValue = tSend + dtSubCValue;
+  const gainValue = dtLightValue - dtSubCValue;
+  const realBase = {
+    ...fieldBase,
+    effectiveDistance: Real(effectiveDistanceValue),
+    dtLight: Real(dtLightValue),
+    dtSubC: Real(dtSubCValue),
+    tLightArrival: Real(tLightArrivalValue),
+    tSubCArrival: Real(tSubCArrivalValue),
+    gainVsLight: Real(gainValue),
+    isRealCorridor: true as const,
+  };
+
+  if (beta >= 1 - marginTol) {
+    return {
+      ...realBase,
+      className: 'LIGHT_SPEED_LIMIT', beatsLight: gainValue > epsSafe, isSubC: false,
+      message: 'V is at or above c; this module is for sub-c feasibility.',
+      warning: 'Use the projection-speed module for non-sub-c cases.',
+    };
+  }
+
+  if (Math.abs(margin) <= marginTol) {
+    return { ...realBase, className: 'EQUAL_TO_LIGHT_BASELINE', beatsLight: false, isSubC: true,
+      message: 'Equal to light baseline: beta^2 + eta^2 ~ 1.' };
+  }
+  if (margin > marginTol) {
+    return { ...realBase, className: 'SUBC_BEATS_LIGHT', beatsLight: true, isSubC: true,
+      message: 'Sub-c feasible: V<c but W is large enough to beat the light baseline.' };
+  }
+  return { ...realBase, className: 'SUBC_TOO_SLOW', beatsLight: false, isSubC: true,
+    message: 'Too slow: increase W or V to beat the light baseline.' };
+}
+
+/** Required |W| window so a sub-c speed v beats light:  D·√(1−β²) < |W| < D. */
+function requiredWForSubCSpeed(args: { dx: number; c: number; v: number; eps?: number }): {
+  D: number;
+  beta: number;
+  wMinExclusive: SingularValue;
+  wMaxExclusive: SingularValue;
+  conditionText: string;
+} {
+  const epsSafe = Math.max(args.eps ?? 1e-9, 1e-9);
+  const D = Math.abs(args.dx);
+  const beta = args.c > epsSafe ? args.v / args.c : NaN;
+  if (D <= epsSafe || !(args.c > epsSafe) || !(args.v > epsSafe)) {
+    const b = Bottom('undefined: dx≈0 or invalid c/v');
+    return { D, beta, wMinExclusive: b, wMaxExclusive: b, conditionText: 'undefined' };
+  }
+  const wMin = D * Math.sqrt(Math.max(0, 1 - beta * beta));
+  return {
+    D,
+    beta,
+    wMinExclusive: Real(wMin),
+    wMaxExclusive: Real(D),
+    conditionText: `${wMin.toFixed(3)} < |W| < ${D.toFixed(3)}`,
+  };
+}
+
+/** Required local speed window so a given |W| beats light:  c·√(1−η²) < v < c. */
+function requiredVForW(args: { dx: number; W: number; c: number; eps?: number }): {
+  D: number;
+  eta: number;
+  vMinExclusive: SingularValue;
+  vMaxExclusive: SingularValue;
+  conditionText: string;
+} {
+  const epsSafe = Math.max(args.eps ?? 1e-9, 1e-9);
+  const D = Math.abs(args.dx);
+  if (D <= epsSafe || !(args.c > epsSafe)) {
+    const b = Bottom('undefined: dx≈0 or invalid c');
+    return { D, eta: NaN, vMinExclusive: b, vMaxExclusive: b, conditionText: 'undefined' };
+  }
+  const eta = Math.abs(args.W) / D;
+  if (eta >= 1) {
+    return {
+      D, eta,
+      vMinExclusive: Bottom('|W| ≥ |dx|: no real sub-c corridor'),
+      vMaxExclusive: Real(args.c),
+      conditionText: 'no real corridor (|W| ≥ |dx|)',
+    };
+  }
+  const vMin = args.c * Math.sqrt(Math.max(0, 1 - eta * eta));
+  return {
+    D,
+    eta,
+    vMinExclusive: Real(vMin),
+    vMaxExclusive: Real(args.c),
+    conditionText: `${vMin.toFixed(3)} < v < ${args.c.toFixed(3)}`,
+  };
+}
+
+
+
+// ===================== src/core/simulation.ts =====================
+/**
+ * simulation.ts — scenario, phases, the escalation state machine and events.
+ *
+ * Escalation ladder (deep-research report → "promotion rules"):
+ *   order 0   → Real                          (ordinary signalling)
+ *   order ½   → BOUNDARY_TOUCH  (Singular)     (touch a singular boundary)
+ *   order 1   → REVERSE_ARRIVAL (Singular,'-') (reverse-time causal event)
+ *   Bottom    → FEEDBACK_CONTRADICTION (⊥)     (higher-order closed-loop paradox)
+ *
+ * The final instruction of the WO: contradictions are PRESERVED as data
+ * (a typed Bottom / Singular state), never hidden or coerced to ∞.
+ */
+
+
+
+
+// --- scenario & phases ------------------------------------------------------
+
+interface Scenario {
+  xBob: number;
+  xAlice: number;
+  tSend: number;
+  c: number;
+  eps: number;
+  /** local sub-c corridor speed ratio v/c (default 0.8) */
+  betaSub?: number;
+}
+
+const DEFAULT_SCENARIO: Scenario = {
+  xBob: 0,
+  xAlice: 5,
+  tSend: 2,
+  c: 1,
+  eps: 1e-6,
+  betaSub: 0.8,
+};
+
+interface Phase {
+  id: string;
+  name: string;
+  alpha: number;
+  branch: Branch;
+  /** expected arrival time used by the built-in demo / self-tests */
+  expectedArrival: number;
+  blurb: string;
+  /**
+   * When true, the phase additionally attempts to *close the causal loop*
+   * (send a reply from the reverse arrival back before the cause). This is the
+   * highest escalation rung and yields Bottom. Off by default so a reverse
+   * arrival is still shown as data (arrives at t=1) rather than collapsing.
+   */
+  closeLoop?: boolean;
+}
+
+/**
+ * Built-in demo sequence tuned to the WO example (Bob x=0, Alice x=5, send t=2, c=1).
+ * The first three are the WO's named phases; the last two complete the escalation
+ * ladder required by the promotion rules: order 0 → ½ → 1 → ⊥.
+ */
+const DEMO_PHASES: Phase[] = [
+  {
+    id: 'ordinary',
+    name: 'Ordinary (α = 0)',
+    alpha: 0,
+    branch: '+',
+    expectedArrival: 7,
+    blurb: 'α=0 recovers special relativity: signal crawls at light speed, arrives t=7.',
+  },
+  {
+    id: 'shortcut',
+    name: 'Mild shortcut (α = 4)',
+    alpha: 4,
+    branch: '+',
+    expectedArrival: 5,
+    blurb: 'Growing α shortens projected travel time. Still forward in time → arrives t=5.',
+  },
+  {
+    id: 'boundary',
+    name: 'Boundary touch (α = 5)',
+    alpha: 5,
+    branch: '+',
+    expectedArrival: 2,
+    blurb: 'dx²−dα²=0: the projected null boundary. dt=0, arrival t=2. Singular order ½ tag.',
+  },
+  {
+    id: 'paradox',
+    name: 'Paradox (α = √24)',
+    alpha: Math.sqrt(24),
+    branch: '-',
+    expectedArrival: 1,
+    blurb: 'Reverse (−) branch lands at t=1 < send t=2 — a singular causal event, kept as data.',
+  },
+  {
+    id: 'feedback',
+    name: 'Feedback contradiction (α = √24, reply)',
+    alpha: Math.sqrt(24),
+    branch: '-',
+    expectedArrival: 1,
+    closeLoop: true,
+    blurb: 'Closing the loop: a reply from t=1 lands before the cause t=2 → ⊥ Bottom, preserved as data.',
+  },
+];
+
+/** The three WO-named phases (used by self-tests / acceptance). */
+const CANONICAL_PHASE_IDS = ['ordinary', 'shortcut', 'paradox'] as const;
+
+// --- events -----------------------------------------------------------------
+
+type EventType =
+  | 'PHASE_CHANGE'
+  | 'SEND'
+  | 'LIGHT_BASELINE'
+  | 'BOUNDARY_TOUCH'
+  | 'REVERSE_ARRIVAL'
+  | 'FEEDBACK_CONTRADICTION'
+  | 'RECEIVE'
+  | 'EXPORT';
+
+type EventLevel = 'info' | 'warn' | 'singular' | 'bottom';
+
+/** Flat snapshot of the scenario + phase controls at event time (schema shape). */
+interface ScenarioSnapshot {
+  xBob: number;
+  xAlice: number;
+  tSend: number;
+  c: number;
+  eps: number;
+  alpha: number;
+  branch: Branch;
+  closeLoop: boolean;
+}
+
+/**
+ * A research-grade, exportable event. Shape matches sim-event.schema.json so the
+ * exported JSON validates. `typedState` is the event's typed singular value;
+ * `arrival` is the (optional) numeric arrival; `payload` carries 3D coordinates.
+ */
+interface SimEvent {
+  id: string;
+  seq: number;
+  type: EventType;
+  level: EventLevel;
+  phaseId: string;
+  message: string;
+  timestamp: number;
+  scenario: ScenarioSnapshot;
+  typedState: SingularValue;
+  arrival?: SingularValue;
+  payload?: Record<string, unknown>;
+}
+
+function snapshotOf(scn: Scenario, phase: Phase): ScenarioSnapshot {
+  return {
+    xBob: scn.xBob,
+    xAlice: scn.xAlice,
+    tSend: scn.tSend,
+    c: scn.c,
+    eps: scn.eps,
+    alpha: phase.alpha,
+    branch: phase.branch,
+    closeLoop: !!phase.closeLoop,
+  };
+}
+
+// --- full diagnostic snapshot for one phase ---------------------------------
+
+interface Diagnostics {
+  scenario: Scenario;
+  phase: Phase;
+  signal: SignalResult;
+  /** Δ_split = x² − α² evaluated at the receiver position with this phase */
+  deltaSplit: number;
+  splitDomain: Domain;
+  /** 5D diagnostic for the worldline implied by this signalling */
+  kinematics: Kinematics;
+  delta5D: number;
+  gamma5D: SingularValue;
+  gamma5DDomain: Domain;
+  /** overall escalation order reached */
+  order: number;
+  /** typed arrival */
+  arrival: SingularValue;
+  reverse: boolean;
+  /** Bottom if a feedback contradiction is detected */
+  contradiction: SingularValue | null;
+  /** Kidi light-speed projection observable (equivalent projected 3D speed) */
+  projection: ProjectionSpeedResult;
+  /** ordinary α=0 light-speed reference baseline (a fixed comparison ruler) */
+  lightBaseline: LightBaselineResult;
+  /** reduced Kidi corridor V–W correlation field (can V<c still beat light?) */
+  vwCorrelation: VWCorrelationResult;
+}
+
+/**
+ * Evaluate one phase end-to-end: signal propagation + split-complex invariant +
+ * 5D diagnostic, then decide whether a feedback contradiction (Bottom) arises.
+ *
+ * Feedback-contradiction rule: a reverse arrival could be used to send a *reply*
+ * back to the sender. If that reply (same branch flipped to forward, same dt)
+ * would itself land before the original cause, the loop is closed and the state
+ * is structurally indeterminate → Bottom (highest escalation).
+ */
+function evaluatePhase(scn: Scenario, phase: Phase): Diagnostics {
+  const setup: SignalSetup = {
+    xSender: scn.xBob,
+    xReceiver: scn.xAlice,
+    tSend: scn.tSend,
+    alpha: phase.alpha,
+    c: scn.c,
+    branch: phase.branch,
+  };
+  const signal = propagateSignal(setup, scn.eps);
+
+  // split-complex invariant at receiver under this phase
+  const deltaSplit = splitNorm({ x: scn.xAlice - scn.xBob, alpha: phase.alpha });
+  const splitDomain = classifyDomain(deltaSplit, scn.eps);
+
+  // Kidi light-speed projection observable (equivalent projected 3D speed)
+  const projection = computeProjectionSpeed({
+    dx: signal.dx,
+    dW: signal.dAlpha,
+    c: scn.c,
+    eps: scn.eps,
+    branch: phase.branch,
+  });
+
+  // ordinary α=0 light-speed reference baseline (comparison ruler)
+  const lightBaseline = computeLightBaseline({
+    xSender: scn.xBob,
+    xReceiver: scn.xAlice,
+    tSend: scn.tSend,
+    c: scn.c,
+    eps: scn.eps,
+  });
+
+  // reduced Kidi corridor V–W correlation field (local V<c vs the α=0 light baseline)
+  const betaSub = scn.betaSub ?? 0.8;
+  const vwCorrelation = computeVWCorrelationField({
+    dx: signal.dx,
+    W: signal.dAlpha,
+    V: betaSub * scn.c,
+    c: scn.c,
+    tSend: scn.tSend,
+    eps: scn.eps,
+    branch: phase.branch,
+  });
+
+  // kinematics implied by the signal: it covers dx in |dt| with alpha-rate u.
+  const dtMag =
+    signal.dtSignal.kind === 'Real'
+      ? Math.abs(signal.dtSignal.value)
+      : Math.abs(signal.dtSignal.kind === 'Singular' ? signal.dtSignal.coeff : 0);
+  const v = dtMag > 0 ? Math.abs(signal.dx) / dtMag : Infinity;
+  const u = dtMag > 0 ? Math.abs(signal.dAlpha) / dtMag : Infinity;
+  const kinematics: Kinematics = { v, u, c: scn.c };
+  const g = gamma5D(kinematics, scn.eps);
+
+  // feedback contradiction detection — only when the phase opts to close the loop
+  let contradiction: SingularValue | null = null;
+  let order = signal.order;
+  if (phase.closeLoop && signal.reverse && signal.tArrive.kind !== 'Bottom') {
+    // A reply travels the same dt back; if cause precedes effect both ways, ⊥.
+    const arriveT =
+      signal.tArrive.kind === 'Real' ? signal.tArrive.value
+      : signal.tArrive.coeff;
+    const replyArrival = arriveT - dtMag; // reply sent from reverse arrival back to Bob
+    if (replyArrival < scn.tSend - scn.eps) {
+      // The contradiction is represented by the typed Bottom state, NOT by a
+      // synthetic infinite singular order. `order` stays finite (1, reverse).
+      contradiction = Bottom(
+        `closed causal loop: reply lands t=${replyArrival.toFixed(3)} < cause t=${scn.tSend}`,
+      );
+    }
+  }
+
+  return {
+    scenario: scn,
+    phase,
+    signal,
+    deltaSplit,
+    splitDomain,
+    kinematics,
+    delta5D: g.delta,
+    gamma5D: g.gamma,
+    gamma5DDomain: g.domain,
+    order,
+    arrival: signal.tArrive,
+    reverse: signal.reverse,
+    contradiction,
+    projection,
+    lightBaseline,
+    vwCorrelation,
+  };
+}
+
+/**
+ * Build the ordered event list for a phase from its diagnostics.
+ * Events carry the full schema shape (id, scenario snapshot, typedState, 3D
+ * payload), so the event log can be exported as valid JSON.
+ */
+function buildEvents(diag: Diagnostics, startSeq: number, now = Date.now() / 1000): SimEvent[] {
+  const out: SimEvent[] = [];
+  const snap = snapshotOf(diag.scenario, diag.phase);
+  const arriveN = arrivalNumber(diag.arrival);
+  const send3: Triple = [diag.scenario.xBob, diag.scenario.tSend, 0];
+  const arrive3: Triple = [diag.scenario.xAlice, arriveN, diag.phase.alpha];
+  let seq = startSeq;
+
+  const push = (
+    type: EventType,
+    level: EventLevel,
+    message: string,
+    typedState: SingularValue,
+    arrival?: SingularValue,
+    payload?: Record<string, unknown>,
+  ) => {
+    out.push({
+      id: `evt-${String(seq).padStart(4, '0')}`,
+      seq,
+      type,
+      level,
+      phaseId: diag.phase.id,
+      message,
+      timestamp: now + seq * 1e-3,
+      scenario: snap,
+      typedState,
+      arrival,
+      payload,
+    });
+    seq++;
+  };
+
+  push('PHASE_CHANGE', 'info', `Phase → ${diag.phase.name} (branch ${diag.phase.branch})`, Real(diag.scenario.tSend));
+  push(
+    'SEND',
+    'info',
+    `Bob emits at x=${diag.scenario.xBob}, t=${diag.scenario.tSend}, α=${num(diag.phase.alpha)}`,
+    Real(diag.scenario.tSend),
+    undefined,
+    { send: send3 },
+  );
+
+  if (diag.lightBaseline.label === 'LIGHT_SPEED_BASELINE') {
+    const lbN = diag.lightBaseline.tLightArrival.kind === 'Real' ? diag.lightBaseline.tLightArrival.value : NaN;
+    push(
+      'LIGHT_BASELINE',
+      'info',
+      `Light baseline: Bob emits α=0 reference ray, arrival ${arrivalText(diag.lightBaseline.tLightArrival)} (β=1)`,
+      diag.lightBaseline.dtLight,
+      diag.lightBaseline.tLightArrival,
+      { send: send3, arrival: [diag.scenario.xAlice, lbN, 0] },
+    );
+  }
+
+  if (diag.splitDomain === 'SINGULAR_BOUNDARY' || diag.signal.domain === 'SINGULAR_BOUNDARY') {
+    push(
+      'BOUNDARY_TOUCH',
+      'singular',
+      `Singular boundary touched (Δ_split=${num(diag.deltaSplit)}, dx²−dα²=${num(diag.signal.underRoot)}) — order ½ tag created`,
+      diag.signal.dtSignal,
+      diag.arrival,
+      { deltaSplit: diag.deltaSplit, deltaSignal: diag.signal.underRoot, send: send3, arrival: arrive3 },
+    );
+  }
+
+  if (diag.reverse) {
+    push(
+      'REVERSE_ARRIVAL',
+      'singular',
+      `Alice receives before Bob sends: lands ${arrivalText(diag.arrival)} < send ${diag.scenario.tSend}. Preserved as Singular(order 1).`,
+      Singular(1, 1, '-', 'reverse arrival'),
+      diag.arrival,
+      { send: send3, arrival: arrive3, deltaSignal: diag.signal.underRoot },
+    );
+  }
+
+  if (diag.contradiction) {
+    push(
+      'FEEDBACK_CONTRADICTION',
+      'bottom',
+      `Higher-order feedback contradiction → ${format(diag.contradiction)}. Kept as Bottom, NOT discarded.`,
+      diag.contradiction,
+      diag.arrival,
+      { send: send3, arrival: arrive3, branch: 'feedback' },
+    );
+  } else {
+    push(
+      'RECEIVE',
+      diag.reverse ? 'warn' : 'info',
+      `Alice ${diag.reverse ? '(paradoxically) ' : ''}receives at x=${diag.scenario.xAlice}, t=${arrivalText(diag.arrival)}`,
+      diag.arrival,
+      diag.arrival,
+      { send: send3, arrival: arrive3, deltaSignal: diag.signal.underRoot },
+    );
+  }
+
+  return out;
+}
+
+// --- small formatters / helpers ---------------------------------------------
+
+type Triple = [number, number, number];
+
+function arrivalNumber(v: SingularValue): number {
+  if (v.kind === 'Real') return v.value;
+  if (v.kind === 'Singular') return v.coeff;
+  return NaN;
+}
+
+function num(n: number): string {
+  return Number.isInteger(n) ? n.toString() : n.toFixed(3);
+}
+function arrivalText(v: SingularValue): string {
+  if (v.kind === 'Real') return `t=${num(v.value)}`;
+  if (v.kind === 'Singular') return `t≈${num(v.coeff)} (σ^${v.order})`;
+  return '⊥';
+}
+
+
+// ===================== src/core/schemas.ts =====================
+/**
+ * schemas.ts — JSON Schemas (Draft 2020-12) for the exported research data, plus
+ * a tiny dependency-free validator used by export validation and self-tests.
+ *
+ * We do NOT pull in a JSON-Schema library (keeps the offline standalone free of
+ * extra vendored deps). The validators below check exactly the constraints the
+ * schemas declare for our value/event shapes.
+ */
+
+
+
+
+// --- the schemas as data (also embedded into exports for provenance) --------
+
+const REAL_VALUE_SCHEMA = {
+  $id: 'https://timeparadoxlab.local/schemas/real-value.schema.json',
+  $schema: 'https://json-schema.org/draft/2020-12/schema',
+  title: 'RealValue',
+  type: 'object',
+  additionalProperties: false,
+  required: ['kind', 'value'],
+  properties: { kind: { const: 'Real' }, value: { type: 'number' } },
+} as const;
+
+const SINGULAR_VALUE_SCHEMA = {
+  $id: 'https://timeparadoxlab.local/schemas/singular-value.schema.json',
+  $schema: 'https://json-schema.org/draft/2020-12/schema',
+  title: 'SingularValueTagged',
+  type: 'object',
+  additionalProperties: false,
+  required: ['kind', 'coeff', 'order', 'branch', 'reason'],
+  properties: {
+    kind: { const: 'Singular' },
+    coeff: { type: 'number' },
+    order: { type: 'number', exclusiveMinimum: 0 },
+    branch: { type: 'string', enum: ['plain', '+', '-', 'loop', 'feedback', 'mixed'] },
+    reason: { type: 'string', minLength: 1 },
+  },
+} as const;
+
+const BOTTOM_VALUE_SCHEMA = {
+  $id: 'https://timeparadoxlab.local/schemas/bottom-value.schema.json',
+  $schema: 'https://json-schema.org/draft/2020-12/schema',
+  title: 'BottomValue',
+  type: 'object',
+  additionalProperties: false,
+  required: ['kind', 'reason'],
+  properties: { kind: { const: 'Bottom' }, reason: { type: 'string', minLength: 1 } },
+} as const;
+
+const TYPED_VALUE_SCHEMA = {
+  $id: 'https://timeparadoxlab.local/schemas/typed-value.schema.json',
+  $schema: 'https://json-schema.org/draft/2020-12/schema',
+  title: 'TypedValue',
+  oneOf: [
+    { $ref: 'real-value.schema.json' },
+    { $ref: 'singular-value.schema.json' },
+    { $ref: 'bottom-value.schema.json' },
+  ],
+} as const;
+
+const SIM_EVENT_SCHEMA = {
+  $id: 'https://timeparadoxlab.local/schemas/sim-event.schema.json',
+  $schema: 'https://json-schema.org/draft/2020-12/schema',
+  title: 'SimEvent',
+  type: 'object',
+  additionalProperties: false,
+  required: ['id', 'seq', 'type', 'level', 'phaseId', 'scenario', 'typedState', 'message', 'timestamp'],
+  properties: {
+    id: { type: 'string' },
+    seq: { type: 'integer', minimum: 0 },
+    type: {
+      type: 'string',
+      enum: ['PHASE_CHANGE', 'SEND', 'LIGHT_BASELINE', 'BOUNDARY_TOUCH', 'REVERSE_ARRIVAL', 'FEEDBACK_CONTRADICTION', 'RECEIVE', 'EXPORT'],
+    },
+    level: { type: 'string', enum: ['info', 'warn', 'singular', 'bottom'] },
+    phaseId: { type: 'string' },
+    message: { type: 'string' },
+    timestamp: { type: 'number' },
+    scenario: {
+      type: 'object',
+      additionalProperties: false,
+      required: ['xBob', 'xAlice', 'tSend', 'c', 'eps', 'alpha', 'branch', 'closeLoop'],
+      properties: {
+        xBob: { type: 'number' },
+        xAlice: { type: 'number' },
+        tSend: { type: 'number' },
+        c: { type: 'number', exclusiveMinimum: 0 },
+        eps: { type: 'number', exclusiveMinimum: 0 },
+        alpha: { type: 'number' },
+        branch: { type: 'string' },
+        closeLoop: { type: 'boolean' },
+      },
+    },
+    typedState: { $ref: 'typed-value.schema.json' },
+    arrival: { $ref: 'typed-value.schema.json' },
+    payload: { type: 'object' },
+  },
+} as const;
+
+// --- validators -------------------------------------------------------------
+
+const BRANCHES: Branch[] = ['plain', '+', '-', 'loop', 'feedback', 'mixed'];
+const EVENT_TYPES: EventType[] = [
+  'PHASE_CHANGE', 'SEND', 'LIGHT_BASELINE', 'BOUNDARY_TOUCH', 'REVERSE_ARRIVAL', 'FEEDBACK_CONTRADICTION', 'RECEIVE', 'EXPORT',
+];
+const LEVELS: EventLevel[] = ['info', 'warn', 'singular', 'bottom'];
+
+const isNum = (x: unknown): x is number => typeof x === 'number' && Number.isFinite(x);
+const isStr = (x: unknown): x is string => typeof x === 'string';
+
+/** Validate a TypedValue (Real | Singular | Bottom). Returns a list of errors. */
+function validateTypedValue(v: unknown, path = 'typedState'): string[] {
+  const errs: string[] = [];
+  if (typeof v !== 'object' || v === null) return [`${path}: not an object`];
+  const o = v as Record<string, unknown>;
+  switch (o.kind) {
+    case 'Real':
+      if (!isNum(o.value)) errs.push(`${path}.value: expected number`);
+      break;
+    case 'Singular':
+      if (!isNum(o.coeff)) errs.push(`${path}.coeff: expected number`);
+      if (!isNum(o.order) || (o.order as number) <= 0) errs.push(`${path}.order: expected number > 0`);
+      if (!isStr(o.branch) || !BRANCHES.includes(o.branch as Branch)) errs.push(`${path}.branch: invalid`);
+      if (!isStr(o.reason) || (o.reason as string).length < 1) errs.push(`${path}.reason: expected non-empty string`);
+      break;
+    case 'Bottom':
+      if (!isStr(o.reason) || (o.reason as string).length < 1) errs.push(`${path}.reason: expected non-empty string`);
+      break;
+    default:
+      errs.push(`${path}.kind: must be Real | Singular | Bottom`);
+  }
+  return errs;
+}
+
+/** Validate a SimEvent against sim-event.schema.json. Returns a list of errors. */
+function validateSimEvent(e: unknown): string[] {
+  const errs: string[] = [];
+  if (typeof e !== 'object' || e === null) return ['event: not an object'];
+  const o = e as Record<string, unknown>;
+
+  if (!isStr(o.id)) errs.push('id: expected string');
+  if (typeof o.seq !== 'number' || !Number.isInteger(o.seq) || (o.seq as number) < 0) errs.push('seq: expected integer ≥ 0');
+  if (!isStr(o.type) || !EVENT_TYPES.includes(o.type as EventType)) errs.push('type: invalid enum');
+  if (!isStr(o.level) || !LEVELS.includes(o.level as EventLevel)) errs.push('level: invalid enum');
+  if (!isStr(o.phaseId)) errs.push('phaseId: expected string');
+  if (!isStr(o.message)) errs.push('message: expected string');
+  if (!isNum(o.timestamp)) errs.push('timestamp: expected number');
+
+  const s = o.scenario as Record<string, unknown> | undefined;
+  if (typeof s !== 'object' || s === null) {
+    errs.push('scenario: expected object');
+  } else {
+    for (const k of ['xBob', 'xAlice', 'tSend', 'alpha'] as const) {
+      if (!isNum(s[k])) errs.push(`scenario.${k}: expected number`);
+    }
+    if (!isNum(s.c) || (s.c as number) <= 0) errs.push('scenario.c: expected number > 0');
+    if (!isNum(s.eps) || (s.eps as number) <= 0) errs.push('scenario.eps: expected number > 0');
+    if (!isStr(s.branch)) errs.push('scenario.branch: expected string');
+    if (typeof s.closeLoop !== 'boolean') errs.push('scenario.closeLoop: expected boolean');
+  }
+
+  errs.push(...validateTypedValue(o.typedState, 'typedState'));
+  if (o.arrival !== undefined) errs.push(...validateTypedValue(o.arrival, 'arrival'));
+
+  return errs;
+}
+
+function isValidSimEvent(e: SimEventLike): boolean {
+  return validateSimEvent(e).length === 0;
+}
+
+/** structural alias to avoid importing the concrete SimEvent type here */
+type SimEventLike = {
+  id: string;
+  seq: number;
+  type: string;
+  level: string;
+  phaseId: string;
+  message: string;
+  timestamp: number;
+  scenario: Record<string, unknown>;
+  typedState: SingularValue;
+  arrival?: SingularValue;
+  payload?: Record<string, unknown>;
+};
+
+
+// ===================== src/core/export.ts =====================
+/**
+ * export.ts — Event Log JSON export.
+ *
+ * `buildExport` is a pure function (testable headlessly); `downloadEventLog`
+ * performs the browser download via a Blob + object URL, the standard way to
+ * save generated text client-side with no backend.
+ */
+
+
+
+
+interface EventLogExport {
+  $schema: string;
+  generator: string;
+  version: string;
+  exportedAt: string;
+  count: number;
+  events: SimEvent[];
+}
+
+const EXPORT_VERSION = '1.1.0';
+
+/** Build the export payload (pure — used by tests and the download path). */
+function buildExport(events: SimEvent[], now: Date = new Date()): EventLogExport {
+  return {
+    $schema: SIM_EVENT_SCHEMA.$id,
+    generator: 'TimeParadoxLab',
+    version: EXPORT_VERSION,
+    exportedAt: now.toISOString(),
+    count: events.length,
+    events,
+  };
+}
+
+/** Validate every event in an export. Returns { valid, errors }. */
+function validateExport(data: EventLogExport): { valid: boolean; errors: string[] } {
+  const errors: string[] = [];
+  data.events.forEach((e, i) => {
+    for (const err of validateSimEvent(e)) errors.push(`events[${i}].${err}`);
+  });
+  return { valid: errors.length === 0, errors };
+}
+
+function serializeExport(events: SimEvent[]): string {
+  return JSON.stringify(buildExport(events), null, 2);
+}
+
+/**
+ * Trigger a client-side download of the event log as JSON. Returns the filename.
+ * Guards against non-browser environments so it can be imported anywhere.
+ */
+function downloadEventLog(events: SimEvent[], filename?: string): string {
+  const name = filename ?? `timeparadoxlab-events-${Date.now()}.json`;
+  const text = serializeExport(events);
+  if (typeof document === 'undefined' || typeof URL === 'undefined' || typeof Blob === 'undefined') {
+    return name; // headless: nothing to download, but serialization already succeeded
+  }
+  const blob = new Blob([text], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = name;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+  return name;
+}
+
+
+// ===================== src/core/geometry3d.ts =====================
+/**
+ * geometry3d.ts — pure geometry builders for the (x, t, α) volume.
+ *
+ * Every builder returns a plain typed descriptor (no Three.js types here) so the
+ * geometry can be unit-tested headlessly and re-used by any renderer. Builders
+ * never emit NaN vertices (asserted by the self-tests).
+ *
+ * Scene convention (right-handed):  X = x (space),  Y = t (time),  Z = α (alpha).
+ */
+
+
+
+type Vec3 = [number, number, number];
+
+interface LineGeometry {
+  id: string;
+  kind: 'line';
+  points: Vec3[];
+}
+
+interface MeshGeometry {
+  id: string;
+  kind: 'mesh';
+  /** flat XYZ triples */
+  positions: number[];
+  /** triangle indices */
+  indices: number[];
+}
+
+interface PointGeometry {
+  id: string;
+  kind: 'point';
+  position: Vec3;
+  label?: string;
+}
+
+interface Bounds {
+  xMin: number;
+  xMax: number;
+  tMin: number;
+  tMax: number;
+  alphaMin: number;
+  alphaMax: number;
+}
+
+interface SceneGeometry {
+  bounds: Bounds;
+  worldlines: LineGeometry[];
+  loci: MeshGeometry[];
+  nullSurface: MeshGeometry[];
+  signal: LineGeometry;
+  markers: PointGeometry[];
+}
+
+// --- helpers ----------------------------------------------------------------
+
+function linspace(a: number, b: number, n: number): number[] {
+  if (n <= 1) return [a];
+  const out = new Array<number>(n);
+  const step = (b - a) / (n - 1);
+  for (let i = 0; i < n; i++) out[i] = a + i * step;
+  return out;
+}
+
+function isFiniteVec(v: Vec3): boolean {
+  return Number.isFinite(v[0]) && Number.isFinite(v[1]) && Number.isFinite(v[2]);
+}
+
+/** any NaN/∞ in a flat positions array? */
+function hasNonFinite(positions: number[]): boolean {
+  for (let i = 0; i < positions.length; i++) if (!Number.isFinite(positions[i])) return true;
+  return false;
+}
+
+// --- worldlines -------------------------------------------------------------
+
+function buildWorldline(id: string, x: number, tMin: number, tMax: number): LineGeometry {
+  return { id, kind: 'line', points: [[x, tMin, 0], [x, tMax, 0]] };
+}
+
+// --- singular loci planes  α = ±x  (ruled along t) --------------------------
+
+/**
+ * Plane α = sign·x extruded across [tMin,tMax] as a quad (two triangles).
+ * sign = +1 → Π₊ (α=x);  sign = −1 → Π₋ (α=−x).
+ */
+function buildSingularPlane(
+  id: string,
+  sign: 1 | -1,
+  xMin: number,
+  xMax: number,
+  tMin: number,
+  tMax: number,
+): MeshGeometry {
+  const corners: Vec3[] = [
+    [xMin, tMin, sign * xMin],
+    [xMax, tMin, sign * xMax],
+    [xMax, tMax, sign * xMax],
+    [xMin, tMax, sign * xMin],
+  ];
+  const positions = corners.flat();
+  const indices = [0, 1, 2, 0, 2, 3];
+  return { id, kind: 'mesh', positions, indices };
+}
+
+// --- null surface from a send event -----------------------------------------
+
+/**
+ * The signal null condition  (x−xS)² − (α−αS)² = (cτ)²,  τ = t − tS.
+ * For each (τ, α): rad = (cτ)² + (α−αS)² ≥ 0, so x = xS ± √rad is always real
+ * (no NaN). Builds one triangulated sheet per ± branch.
+ */
+function buildNullSurface(
+  send: Vec3,
+  c: number,
+  tauMax: number,
+  alphaMax: number,
+  nT = 24,
+  nA = 24,
+): MeshGeometry[] {
+  const [xS, tS, alphaS] = send;
+  const taus = linspace(-tauMax, tauMax, nT);
+  const alphas = linspace(alphaS - alphaMax, alphaS + alphaMax, nA);
+
+  const buildSheet = (id: string, branch: 1 | -1): MeshGeometry => {
+    const positions: number[] = [];
+    for (let i = 0; i < nT; i++) {
+      for (let k = 0; k < nA; k++) {
+        const tau = taus[i];
+        const a = alphas[k];
+        const rad = (c * tau) ** 2 + (a - alphaS) ** 2;
+        const x = xS + branch * Math.sqrt(rad);
+        positions.push(x, tS + tau, a);
+      }
+    }
+    const indices: number[] = [];
+    for (let i = 0; i < nT - 1; i++) {
+      for (let k = 0; k < nA - 1; k++) {
+        const v00 = i * nA + k;
+        const v01 = i * nA + (k + 1);
+        const v10 = (i + 1) * nA + k;
+        const v11 = (i + 1) * nA + (k + 1);
+        indices.push(v00, v10, v11, v00, v11, v01);
+      }
+    }
+    return { id, kind: 'mesh', positions, indices };
+  };
+
+  return [buildSheet('null-plus', 1), buildSheet('null-minus', -1)];
+}
+
+// --- signal path ------------------------------------------------------------
+
+/**
+ * Didactic signal segment from the send point to the interpreted arrival point.
+ * NOT a claim of a physical geodesic — a visualization aid only. If the arrival
+ * is non-finite (e.g. Bottom), the segment degenerates to a point (no NaN).
+ */
+function buildSignalPath(send: Vec3, arrive: Vec3): LineGeometry {
+  const end = isFiniteVec(arrive) ? arrive : send;
+  return { id: 'signal', kind: 'line', points: [send, end] };
+}
+
+// --- assemble the whole scene from diagnostics ------------------------------
+
+function computeBounds(diag: Diagnostics, pad = 1.5): Bounds {
+  const { xBob, xAlice, tSend } = diag.scenario;
+  const alpha = diag.phase.alpha;
+  const xMin = Math.min(xBob, xAlice) - pad;
+  const xMax = Math.max(xBob, xAlice) + pad;
+  const span = Math.max(Math.abs(xMax), Math.abs(xMin), Math.abs(alpha) + pad, 6);
+  return {
+    xMin: -span,
+    xMax: span,
+    tMin: Math.min(-1, tSend - 4),
+    tMax: Math.max(tSend + 6, 9),
+    alphaMin: -span,
+    alphaMax: span,
+  };
+}
+
+function buildSceneGeometry(diag: Diagnostics): SceneGeometry {
+  const b = computeBounds(diag);
+  const { xBob, xAlice, tSend, c } = diag.scenario;
+  const alpha = diag.phase.alpha;
+  const arriveT = arrivalNumber(diag.arrival);
+
+  const send: Vec3 = [xBob, tSend, 0];
+  const arrive: Vec3 = [xAlice, arriveT, alpha];
+
+  const tauMax = Math.max(b.tMax - tSend, tSend - b.tMin, 6);
+  const alphaMax = b.alphaMax;
+
+  return {
+    bounds: b,
+    worldlines: [
+      buildWorldline('bob', xBob, b.tMin, b.tMax),
+      buildWorldline('alice', xAlice, b.tMin, b.tMax),
+    ],
+    loci: [
+      buildSingularPlane('locus-plus', 1, b.xMin, b.xMax, b.tMin, b.tMax),
+      buildSingularPlane('locus-minus', -1, b.xMin, b.xMax, b.tMin, b.tMax),
+    ],
+    nullSurface: buildNullSurface(send, c, tauMax, alphaMax),
+    signal: buildSignalPath(send, arrive),
+    markers: [
+      { id: 'send', kind: 'point', position: send, label: 'SEND' },
+      { id: 'arrive', kind: 'point', position: isFiniteVec(arrive) ? arrive : send, label: 'RECEIVE' },
+    ],
+  };
+}
+
+
+// ===================== src/core/camera.ts =====================
+/**
+ * camera.ts — spherical orbit-camera helpers for the 3D volume (pure math).
+ *
+ *   C = T + r · [ cosφ·cosθ , sinφ , cosφ·sinθ ]
+ *
+ * where T is the target, r the orbit radius, θ azimuth, φ elevation. The
+ * Volume3DView wires pointer drag → (θ, φ), wheel → r, and re-derives C here.
+ */
+
+
+
+type CameraPreset = 'iso' | 'front' | 'top' | 'side' | 'follow';
+
+interface SphericalCamera {
+  target: Vec3;
+  radius: number;
+  azimuth: number; // θ
+  elevation: number; // φ
+}
+
+const HALF_PI = Math.PI / 2;
+const EL_LIMIT = HALF_PI - 0.001; // avoid gimbal lock at the poles
+
+function clampElevation(phi: number): number {
+  return Math.max(-EL_LIMIT, Math.min(EL_LIMIT, phi));
+}
+
+/** World-space camera position for a spherical camera. */
+function cameraPosition(cam: SphericalCamera): Vec3 {
+  const { target, radius: r, azimuth: th, elevation: ph } = cam;
+  return [
+    target[0] + r * Math.cos(ph) * Math.cos(th),
+    target[1] + r * Math.sin(ph),
+    target[2] + r * Math.cos(ph) * Math.sin(th),
+  ];
+}
+
+interface PresetAngles {
+  azimuth: number;
+  elevation: number;
+}
+
+const PRESET_ANGLES: Record<CameraPreset, PresetAngles> = {
+  iso: { azimuth: Math.PI * 0.25, elevation: Math.PI * 0.18 },
+  front: { azimuth: HALF_PI, elevation: 0 }, // look along α at the (x,t) wall
+  top: { azimuth: HALF_PI, elevation: EL_LIMIT }, // look down t at the (x,α) plane
+  side: { azimuth: 0, elevation: 0 }, // look along x at the (t,α) wall
+  follow: { azimuth: Math.PI * 0.28, elevation: Math.PI * 0.14 },
+};
+
+/** Build a spherical camera for a named preset. */
+function presetCamera(preset: CameraPreset, target: Vec3, radius: number): SphericalCamera {
+  const a = PRESET_ANGLES[preset] ?? PRESET_ANGLES.iso;
+  return {
+    target,
+    radius,
+    azimuth: a.azimuth,
+    elevation: clampElevation(a.elevation),
+  };
+}
+
+/** A camera is valid if all numbers are finite, radius > 0, elevation in range. */
+function isValidCamera(cam: SphericalCamera): boolean {
+  const finite =
+    cam.target.every(Number.isFinite) &&
+    Number.isFinite(cam.radius) &&
+    Number.isFinite(cam.azimuth) &&
+    Number.isFinite(cam.elevation);
+  return finite && cam.radius > 0 && Math.abs(cam.elevation) <= HALF_PI;
+}
+
+const ALL_PRESETS: CameraPreset[] = ['iso', 'front', 'top', 'side', 'follow'];
+
+
+// ===================== src/core/projection.ts =====================
+/**
+ * projection.ts — manual perspective-projection fallback for non-Three tooling
+ * (and a parity reference for tests). Three.js performs the real projection in
+ * the live view; this module mirrors it with an explicit look-at camera.
+ */
+
+
+
+const sub = (a: Vec3, b: Vec3): Vec3 => [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
+const dot = (a: Vec3, b: Vec3): number => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
+const cross = (a: Vec3, b: Vec3): Vec3 => [
+  a[1] * b[2] - a[2] * b[1],
+  a[2] * b[0] - a[0] * b[2],
+  a[0] * b[1] - a[1] * b[0],
+];
+function normalize(a: Vec3): Vec3 {
+  const len = Math.hypot(a[0], a[1], a[2]) || 1;
+  return [a[0] / len, a[1] / len, a[2] / len];
+}
+
+// rotation helpers (per the WO's stated convention)
+function rotateY(p: Vec3, a: number): Vec3 {
+  const c = Math.cos(a), s = Math.sin(a);
+  return [c * p[0] + s * p[2], p[1], -s * p[0] + c * p[2]];
+}
+function rotateX(p: Vec3, a: number): Vec3 {
+  const c = Math.cos(a), s = Math.sin(a);
+  return [p[0], c * p[1] - s * p[2], s * p[1] + c * p[2]];
+}
+
+interface Projected {
+  x: number; // NDC x  [-1, 1] within frustum
+  y: number; // NDC y
+  depth: number; // view-space depth (>0 in front)
+  visible: boolean;
+}
+
+/**
+ * Perspective project a world point with an explicit look-at camera.
+ * fov is the vertical field of view in radians; aspect = width/height.
+ */
+function projectPoint(
+  p: Vec3,
+  eye: Vec3,
+  target: Vec3,
+  up: Vec3,
+  fov: number,
+  aspect: number,
+): Projected {
+  const forward = normalize(sub(target, eye));
+  const right = normalize(cross(forward, up));
+  const trueUp = cross(right, forward);
+
+  const rel = sub(p, eye);
+  const cx = dot(rel, right);
+  const cy = dot(rel, trueUp);
+  const cz = dot(rel, forward); // depth along view axis
+
+  if (cz <= 1e-6) return { x: 0, y: 0, depth: cz, visible: false };
+
+  const f = 1 / Math.tan(fov / 2);
+  const x = (f / aspect) * (cx / cz);
+  const y = f * (cy / cz);
+  return { x, y, depth: cz, visible: Math.abs(x) <= 1 && Math.abs(y) <= 1 };
+}
+
+
+// ===================== src/core/colorRules.ts =====================
+/**
+ * colorRules.ts — shared appearance mapping for typed values, used by both the
+ * 2D canvases and the 3D volume so the visual language is consistent.
+ *
+ *   strokeWidth = w0 + kw·λ
+ *   opacity     = clamp(o0 + ko·λ, 0.25, 1.0)
+ *   glowRadius  = g0 + kg·λ
+ *
+ * No information is encoded by colour alone — every Appearance also carries a
+ * text `label`, satisfying the accessibility requirement.
+ */
+
+
+
+interface Appearance {
+  color: string;
+  opacity: number;
+  thickness: number;
+  glow: number;
+  pulse: boolean;
+  dashed: boolean;
+  /** human-readable state label (never rely on colour alone) */
+  label: string;
+}
+
+// tuning constants for the formulas above
+const W0 = 2,
+  KW = 1;
+const O0 = 0.55,
+  KO = 0.18;
+const G0 = 0,
+  KG = 1.5;
+
+const clamp = (x: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, x));
+
+/** order λ used for sizing (Real→0, Singular→order, Bottom→2). */
+function orderOf(v: SingularValue): number {
+  if (v.kind === 'Real') return 0;
+  if (v.kind === 'Singular') return v.order;
+  return 2;
+}
+
+/** Base colour family by state (cyan→amber→orange→magenta→red). */
+function baseColor(v: SingularValue): string {
+  if (v.kind === 'Real') return '#3fd0ff'; // cyan/teal
+  if (v.kind === 'Bottom') return '#ff3b3b'; // saturated red
+  // Singular by order
+  if (v.order <= 0.5) return '#ffd23b'; // amber
+  if (v.order <= 1) return '#ff7a3b'; // orange
+  return '#e23bd0'; // red → magenta for λ>1
+}
+
+/** Branch hue accent (forward greenish, reverse reddish, loop/feedback violet). */
+function branchAccent(branch: Branch): string {
+  switch (branch) {
+    case '+':
+      return '#56e39f';
+    case '-':
+      return '#ff7a3b';
+    case 'loop':
+    case 'feedback':
+    case 'mixed':
+      return '#b06bff';
+    default:
+      return '#9fb6d6';
+  }
+}
+
+function stateLabel(v: SingularValue): string {
+  if (v.kind === 'Real') return 'Real';
+  if (v.kind === 'Bottom') return 'Bottom (⊥)';
+  const ord = v.order === 0.5 ? '½' : String(v.order);
+  return `Singular λ=${ord} (${v.branch})`;
+}
+
+/** Full appearance for a typed value, optionally biased by an explicit branch. */
+function appearanceForValue(v: SingularValue, branch: Branch = 'plain'): Appearance {
+  const lambda = orderOf(v);
+  const isReverse = branch === '-' || (v.kind === 'Singular' && v.branch === '-');
+  return {
+    color: baseColor(v),
+    opacity: clamp(O0 + KO * lambda, 0.25, 1.0),
+    thickness: W0 + KW * lambda,
+    glow: G0 + KG * lambda,
+    pulse: v.kind === 'Singular' && Math.abs(v.order - 0.5) < 1e-9,
+    dashed: isReverse,
+    label: stateLabel(v),
+  };
+}
+
+// consistent domain colours reused across panels
+const DOMAIN_COLORS = {
+  REAL_DOMAIN: '#56e39f',
+  SINGULAR_BOUNDARY: '#ffd23b',
+  ALPHA_DOMAIN: '#e23bd0',
+} as const;
+
+
+// ===================== src/core/useElementSize.ts =====================
+/**
+ * useElementSize — measure a container with ResizeObserver so canvases/3D views
+ * can size to the available width (wide-layout patch). Falls back gracefully if
+ * ResizeObserver is unavailable.
+ */
+
+
+function useElementSize<T extends HTMLElement>() {
+  const ref = useRef<T | null>(null);
+  const [size, setSize] = useState({ width: 600, height: 420 });
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el || typeof ResizeObserver === 'undefined') return;
+
+    const observer = new ResizeObserver((entries) => {
+      const entry = entries[0];
+      if (!entry) return;
+      const rect = entry.contentRect;
+      setSize({
+        width: Math.max(320, Math.floor(rect.width)),
+        height: Math.max(280, Math.floor(rect.height)),
+      });
+    });
+
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+
+  return { ref, size };
+}
+
+
+// ===================== src/core/selfTest.ts =====================
+/**
+ * selfTest.ts — executable test cases + acceptance criteria from the WO.
+ *
+ * Pure functions only, so they run identically in Node, Vitest, or in-browser.
+ * The UI exposes runSelfTests() behind a "Run self-tests" button.
+ */
+
+
+
+
+
+
+
+
+
+
+const phaseById = (id: string) => {
+  const p = DEMO_PHASES.find((q) => q.id === id);
+  if (!p) throw new Error(`missing demo phase ${id}`);
+  return p;
+};
+
+interface TestResult {
+  name: string;
+  pass: boolean;
+  detail: string;
+}
+
+const EPS = 1e-9;
+const near = (a: number, b: number, tol = 1e-6) => Math.abs(a - b) <= tol;
+
+function runSelfTests(): TestResult[] {
+  const r: TestResult[] = [];
+  const check = (name: string, pass: boolean, detail = '') =>
+    r.push({ name, pass, detail });
+
+  // ---- WO demo arrivals (acceptance criteria) ----------------------------
+  const d0 = evaluatePhase(DEFAULT_SCENARIO, phaseById('ordinary'));
+  const d1 = evaluatePhase(DEFAULT_SCENARIO, phaseById('shortcut'));
+  const d2 = evaluatePhase(DEFAULT_SCENARIO, phaseById('paradox'));
+  const dBoundary = evaluatePhase(DEFAULT_SCENARIO, phaseById('boundary'));
+  const dFeedback = evaluatePhase(DEFAULT_SCENARIO, phaseById('feedback'));
+
+  check(
+    'Ordinary phase α=0 arrives at t=7',
+    d0.arrival.kind === 'Real' && near(d0.arrival.value, 7),
+    format(d0.arrival),
+  );
+  check(
+    'Shortcut phase α=4 arrives at t=5',
+    d1.arrival.kind === 'Real' && near(d1.arrival.value, 5),
+    format(d1.arrival),
+  );
+  check(
+    'Paradox phase α=√24 arrives at t=1 (reverse branch)',
+    d2.arrival.kind === 'Real' && near(d2.arrival.value, 1) && d2.reverse,
+    `${format(d2.arrival)}, reverse=${d2.reverse}`,
+  );
+  check(
+    'Ordinary phase is NOT a reverse/paradox event',
+    !d0.reverse && d0.contradiction === null,
+    `reverse=${d0.reverse}`,
+  );
+  check(
+    'Boundary phase α=5 (dx²=dα²) is a SINGULAR_BOUNDARY, order ½',
+    dBoundary.signal.domain === 'SINGULAR_BOUNDARY' && dBoundary.signal.order === 0.5,
+    `domain=${dBoundary.signal.domain}, order=${dBoundary.signal.order}, arrival=${format(dBoundary.arrival)}`,
+  );
+
+  // ---- split-complex geometry (critique p.13) ----------------------------
+  check(
+    'N(2+j) = 3 and z is invertible (REAL_DOMAIN)',
+    near(splitNorm({ x: 2, alpha: 1 }), 3) &&
+      splitInverse({ x: 2, alpha: 1 }, EPS).domain === 'REAL_DOMAIN',
+    `N=${splitNorm({ x: 2, alpha: 1 })}`,
+  );
+  {
+    const inv = splitInverse({ x: 1, alpha: 1 }, EPS);
+    check(
+      'N(1+j) = 0 → not invertible, SINGULAR_BOUNDARY tag',
+      near(splitNorm({ x: 1, alpha: 1 }), 0) &&
+        inv.domain === 'SINGULAR_BOUNDARY' &&
+        isSingular(inv.value.re),
+      format(inv.value.re),
+    );
+  }
+
+  // ---- 5D diagnostic (critique p.14) -------------------------------------
+  {
+    const k = { v: 1.2, u: 0.8, c: 1 };
+    const g = gamma5D(k, EPS);
+    check(
+      'Δ₅D(v=1.2c,u=0.8c)=0.20, γ₅D≈2.236 (Real)',
+      near(delta5D(k), 0.2) && g.gamma.kind === 'Real' && near(g.gamma.value, 2.236, 1e-3),
+      `Δ=${delta5D(k).toFixed(3)}, γ=${format(g.gamma)}`,
+    );
+  }
+  {
+    // v=u: Δ₅D = 1, ordinary
+    const g = gamma5D({ v: 0.6, u: 0.6, c: 1 }, EPS);
+    check('v=u ⇒ Δ₅D=1, γ₅D=1', g.gamma.kind === 'Real' && near(g.gamma.value, 1), format(g.gamma));
+  }
+
+  // ---- singular arithmetic (graded algebra, critique p.13) ---------------
+  check(
+    'Real(2)+Real(3)=Real(5)',
+    add(Real(2), Real(3)).kind === 'Real' && (add(Real(2), Real(3)) as any).value === 5,
+    format(add(Real(2), Real(3))),
+  );
+  check(
+    'Singular(a,λ,b)·Singular(c,μ,d): coeff×, order+, branch merge',
+    (() => {
+      const m = mul(Singular(2, 0.5, 'plain'), Singular(3, 1, '+'));
+      return isSingular(m) && m.coeff === 6 && m.order === 1.5 && m.branch === '+';
+    })(),
+    format(mul(Singular(2, 0.5, 'plain'), Singular(3, 1, '+'))),
+  );
+  check(
+    'Singular(_,_,+) + Singular(_,_,−) ⇒ Bottom (incompatible branches)',
+    isBottom(add(Singular(1, 1, '+'), Singular(1, 1, '-'))),
+    format(add(Singular(1, 1, '+'), Singular(1, 1, '-'))),
+  );
+  check(
+    'a/0 ⇒ Singular(a,1) — division by zero is tagged, not ∞',
+    (() => {
+      const q = divide(Real(7), Real(0), EPS);
+      return isSingular(q) && q.coeff === 7 && q.order === 1;
+    })(),
+    format(divide(Real(7), Real(0), EPS)),
+  );
+  check(
+    '0/0 ⇒ Bottom (indeterminate)',
+    isBottom(divide(Real(0), Real(0), EPS)),
+    format(divide(Real(0), Real(0), EPS)),
+  );
+  check(
+    'mergeBranch(+,−) is incompatible (null)',
+    mergeBranch('+', '-') === null && mergeBranch('plain', '+') === '+',
+    '',
+  );
+
+  // ---- escalation ladder: order 0 → ½ → 1 → ⊥ -----------------------------
+  check(
+    'Paradox phase reaches reverse-arrival escalation (order ≥ 1)',
+    d2.order >= 1 && d2.reverse,
+    `order=${d2.order}`,
+  );
+  check(
+    'Feedback phase (closeLoop) escalates to Bottom contradiction (finite order, no synthetic ∞)',
+    isBottom(dFeedback.contradiction as any) && Number.isFinite(dFeedback.order),
+    dFeedback.contradiction ? `${format(dFeedback.contradiction)}, order=${dFeedback.order}` : 'no contradiction',
+  );
+  check(
+    'Plain paradox (no closeLoop) is preserved as data, NOT collapsed to ⊥',
+    d2.contradiction === null && d2.arrival.kind === 'Real',
+    `contradiction=${d2.contradiction}`,
+  );
+
+  // ---- 3D geometry builders (no NaN vertices) -----------------------------
+  {
+    const G = buildSceneGeometry(d2);
+    const allPositions = [
+      ...G.loci.flatMap((m) => m.positions),
+      ...G.nullSurface.flatMap((m) => m.positions),
+    ];
+    const linesFinite =
+      G.worldlines.every((w) => w.points.every(isFiniteVec)) &&
+      G.signal.points.every(isFiniteVec) &&
+      G.markers.every((m) => isFiniteVec(m.position));
+    check(
+      '3D geometry: no NaN vertices in loci/null-surface/worldlines/signal',
+      !hasNonFinite(allPositions) && linesFinite,
+      `${allPositions.length} mesh coords sampled`,
+    );
+    check(
+      '3D geometry: 2 singular planes + 2 null sheets + 2 worldlines built',
+      G.loci.length === 2 && G.nullSurface.length === 2 && G.worldlines.length === 2,
+      `loci=${G.loci.length}, null=${G.nullSurface.length}, world=${G.worldlines.length}`,
+    );
+  }
+
+  // ---- camera math + presets ----------------------------------------------
+  check(
+    'All camera presets produce valid cameras with finite positions',
+    ALL_PRESETS.every((p) => {
+      const cam = presetCamera(p, [2.5, 3, 0], 20);
+      return isValidCamera(cam) && cameraPosition(cam).every(Number.isFinite);
+    }),
+    ALL_PRESETS.join(','),
+  );
+  {
+    const cam = presetCamera('front', [2.5, 3, 0], 20);
+    const eye = cameraPosition(cam);
+    const pr = projectPoint([2.5, 3, 0], eye, cam.target, [0, 1, 0], Math.PI / 4, 1.5);
+    check(
+      'Camera projection: a camera target lands at screen centre, in front',
+      Math.abs(pr.x) < 1e-6 && Math.abs(pr.y) < 1e-6 && pr.depth > 0,
+      `x=${pr.x.toFixed(4)}, y=${pr.y.toFixed(4)}, depth=${pr.depth.toFixed(2)}`,
+    );
+  }
+
+  // ---- event export validates against the JSON schema ----------------------
+  {
+    const evs = [
+      ...buildEvents(d0, 0),
+      ...buildEvents(d1, 100),
+      ...buildEvents(d2, 200),
+      ...buildEvents(dBoundary, 300),
+      ...buildEvents(dFeedback, 400),
+    ];
+    const perEventErrors = evs.flatMap((e) => validateSimEvent(e));
+    const exp = buildExport(evs);
+    const v = validateExport(exp);
+    check(
+      'Exported event log validates against sim-event.schema.json',
+      perEventErrors.length === 0 && v.valid && exp.count === evs.length,
+      perEventErrors.length ? perEventErrors.slice(0, 3).join('; ') : `${evs.length} events valid`,
+    );
+    const reverse = evs.find((e) => e.type === 'REVERSE_ARRIVAL');
+    check(
+      'Reverse-arrival event carries Singular(order 1, branch −) typedState + finite arrival',
+      !!reverse &&
+        reverse.typedState.kind === 'Singular' &&
+        reverse.typedState.order === 1 &&
+        reverse.typedState.branch === '-' &&
+        reverse.arrival?.kind === 'Real',
+      reverse ? format(reverse.typedState) : 'missing',
+    );
+  }
+
+  // ---- Kidi Light-Speed Projection (patched, tolerance-based) --------------
+  {
+    const light = computeProjectionSpeed({ dx: 5, dW: 0, c: 1, eps: 1e-9 });
+    check(
+      'Kidi: dx=5, W=0 ⇒ LIGHT_SPEED, β_equiv=Real(1), v_equiv=Real(1)',
+      light.className === 'LIGHT_SPEED' &&
+        light.betaEquiv.kind === 'Real' && near(light.betaEquiv.value, 1) &&
+        light.vEquiv.kind === 'Real' && near(light.vEquiv.value, 1) &&
+        light.isRealProjection,
+      `${light.className}, ${format(light.betaEquiv)}`,
+    );
+
+    const sup = computeProjectionSpeed({ dx: 5, dW: 4, c: 1, eps: 1e-9 });
+    check(
+      'Kidi: dx=5, W=4 ⇒ PROJECTED_SUPERLUMINAL, β_equiv=Real(5/3)',
+      sup.className === 'PROJECTED_SUPERLUMINAL' &&
+        sup.betaEquiv.kind === 'Real' && near(sup.betaEquiv.value, 5 / 3) &&
+        sup.vEquiv.kind === 'Real' && near(sup.vEquiv.value, 5 / 3) &&
+        sup.isRealProjection,
+      `${sup.className}, ${format(sup.betaEquiv)}`,
+    );
+
+    const bnd = computeProjectionSpeed({ dx: 5, dW: 5, c: 1, eps: 1e-9 });
+    check(
+      'Kidi: dx=5, W=5 ⇒ KIDI_BOUNDARY, β/v Singular order ½, not real',
+      bnd.className === 'KIDI_BOUNDARY' &&
+        bnd.betaEquiv.kind === 'Singular' && bnd.betaEquiv.order === 0.5 &&
+        bnd.vEquiv.kind === 'Singular' && bnd.vEquiv.order === 0.5 &&
+        !bnd.isRealProjection,
+      `${bnd.className}, ${format(bnd.betaEquiv)}`,
+    );
+
+    const wdom = computeProjectionSpeed({ dx: 5, dW: 6, c: 1, eps: 1e-9 });
+    check(
+      'Kidi: dx=5, W=6 ⇒ W_DOMAIN_NO_REAL_DT, typed (not ∞/Bottom), isReal=false',
+      wdom.className === 'W_DOMAIN_NO_REAL_DT' &&
+        wdom.betaEquiv.kind === 'Singular' &&
+        Number.isFinite((wdom.betaEquiv as any).coeff) &&
+        wdom.isRealProjection === false &&
+        !!wdom.warning,
+      `${wdom.className}, ${format(wdom.betaEquiv)}`,
+    );
+
+    const undef = computeProjectionSpeed({ dx: 0, dW: 1, c: 1, eps: 1e-9 });
+    check(
+      'Kidi: dx=0 ⇒ UNDEFINED_DX, β/v Bottom, eta=NaN',
+      undef.className === 'UNDEFINED_DX' &&
+        undef.betaEquiv.kind === 'Bottom' &&
+        undef.vEquiv.kind === 'Bottom' &&
+        !Number.isFinite(undef.eta),
+      undef.className,
+    );
+
+    // tolerance: near-zero W is still LIGHT_SPEED (no exact equality)
+    const nearZero = computeProjectionSpeed({ dx: 5, dW: 1e-12, c: 1, eps: 1e-9 });
+    check(
+      'Kidi tolerance: W≈0 (1e-12) stays LIGHT_SPEED, β≈1',
+      nearZero.className === 'LIGHT_SPEED' && nearZero.betaEquiv.kind === 'Real' && near(nearZero.betaEquiv.value, 1, 1e-9),
+      nearZero.className,
+    );
+
+    // tolerance: near-boundary collapses to KIDI_BOUNDARY
+    const nearBnd = computeProjectionSpeed({ dx: 5, dW: 5 - 1e-10, c: 1, eps: 1e-9 });
+    check(
+      'Kidi tolerance: W=5−1e-10 ⇒ KIDI_BOUNDARY (Singular)',
+      nearBnd.className === 'KIDI_BOUNDARY' && nearBnd.betaEquiv.kind === 'Singular',
+      nearBnd.className,
+    );
+
+    // null-geometry identity v² − u² = c²  — REAL DOMAIN ONLY
+    {
+      const pj = sup; // PROJECTED_SUPERLUMINAL
+      if (pj.className === 'LIGHT_SPEED' || pj.className === 'PROJECTED_SUPERLUMINAL') {
+        const dt = Math.sqrt(pj.deltaSignal) / pj.c;
+        const v = Math.abs(pj.dx) / dt;
+        const u = Math.abs(pj.dW) / dt;
+        check(
+          'Kidi null-geometry identity (real domain): v_equiv² − u² = c²',
+          near(v * v - u * u, pj.c * pj.c, 1e-9),
+          `${(v * v - u * u).toFixed(6)} vs ${pj.c * pj.c}`,
+        );
+      }
+    }
+
+    // integration: Diagnostics carries the same canonical projection
+    check(
+      'Kidi integration: phase projections classify ordinary→LIGHT_SPEED, shortcut→SUPERLUMINAL, boundary→KIDI_BOUNDARY',
+      d0.projection.className === 'LIGHT_SPEED' &&
+        d1.projection.className === 'PROJECTED_SUPERLUMINAL' &&
+        dBoundary.projection.className === 'KIDI_BOUNDARY',
+      `${d0.projection.className}/${d1.projection.className}/${dBoundary.projection.className}`,
+    );
+  }
+
+  // ---- Light-Speed Reference Baseline (α=0 comparison ruler) ---------------
+  check(
+    'Light baseline: default dx=5,c=1,tSend=2 arrives at t=7',
+    d0.lightBaseline.tLightArrival.kind === 'Real' && near(d0.lightBaseline.tLightArrival.value, 7),
+    format(d0.lightBaseline.tLightArrival),
+  );
+  check(
+    'Ordinary α=0 current signal matches light baseline',
+    d0.arrival.kind === 'Real' &&
+      d0.lightBaseline.tLightArrival.kind === 'Real' &&
+      near(d0.arrival.value, d0.lightBaseline.tLightArrival.value),
+    `arrival=${format(d0.arrival)}, baseline=${format(d0.lightBaseline.tLightArrival)}`,
+  );
+  check(
+    'Shortcut α=4 arrives before light baseline by 2 time units',
+    d1.arrival.kind === 'Real' &&
+      d1.lightBaseline.tLightArrival.kind === 'Real' &&
+      near(d1.lightBaseline.tLightArrival.value - d1.arrival.value, 2),
+    `arrival=${format(d1.arrival)}, baseline=${format(d1.lightBaseline.tLightArrival)}`,
+  );
+  check(
+    'Boundary α=5 keeps finite light baseline (t=7) while current path reaches Kidi Boundary',
+    dBoundary.lightBaseline.tLightArrival.kind === 'Real' &&
+      near(dBoundary.lightBaseline.tLightArrival.value, 7) &&
+      dBoundary.signal.domain === 'SINGULAR_BOUNDARY',
+    `baseline=${format(dBoundary.lightBaseline.tLightArrival)}, domain=${dBoundary.signal.domain}`,
+  );
+  check(
+    'Paradox reverse arrival (t=1) occurs before send while light baseline stays forward causal (t=7)',
+    d2.arrival.kind === 'Real' && near(d2.arrival.value, 1) &&
+      d2.lightBaseline.tLightArrival.kind === 'Real' && near(d2.lightBaseline.tLightArrival.value, 7),
+    `arrival=${format(d2.arrival)}, baseline=${format(d2.lightBaseline.tLightArrival)}`,
+  );
+
+  // ---- Sub-c Kidi Corridor feasibility solver ------------------------------
+  {
+    const realV = (v: any) => (v.kind === 'Real' ? v.value : NaN);
+
+    const beats = computeVWCorrelationField({ dx: 5, W: 4, V: 0.8, c: 1, tSend: 2 });
+    check(
+      'Sub-c: v=0.8c,W=4 beats light (t_sub-c=3.75, gain=1.25)',
+      beats.className === 'SUBC_BEATS_LIGHT' && beats.beatsLight &&
+        near(realV(beats.dtSubC), 3.75) && near(realV(beats.gainVsLight), 1.25),
+      `${beats.className}, dtSubC=${format(beats.dtSubC)}, gain=${format(beats.gainVsLight)}`,
+    );
+
+    const slow = computeVWCorrelationField({ dx: 5, W: 2, V: 0.8, c: 1, tSend: 2 });
+    check(
+      'Sub-c: v=0.8c,W=2 is SUBC_TOO_SLOW',
+      slow.className === 'SUBC_TOO_SLOW' && !slow.beatsLight,
+      slow.className,
+    );
+
+    const reqW = requiredWForSubCSpeed({ dx: 5, c: 1, v: 0.8 });
+    check(
+      'Sub-c: required W window for v=0.8c is 3 < |W| < 5',
+      reqW.wMinExclusive.kind === 'Real' && near(reqW.wMinExclusive.value, 3) &&
+        reqW.wMaxExclusive.kind === 'Real' && near(reqW.wMaxExclusive.value, 5),
+      reqW.conditionText,
+    );
+
+    const reqV = requiredVForW({ dx: 5, W: 4, c: 1 });
+    check(
+      'Sub-c: required V window for W=4 is 0.6 < v < 1',
+      reqV.vMinExclusive.kind === 'Real' && near(reqV.vMinExclusive.value, 0.6) &&
+        reqV.vMaxExclusive.kind === 'Real' && near(reqV.vMaxExclusive.value, 1),
+      reqV.conditionText,
+    );
+
+    const bnd = computeVWCorrelationField({ dx: 5, W: 5, V: 0.8, c: 1, tSend: 2 });
+    check('Sub-c: W=5 ⇒ KIDI_BOUNDARY (typed, not zero-time travel)',
+      bnd.className === 'KIDI_BOUNDARY' && bnd.dtSubC.kind === 'Singular', bnd.className);
+
+    const noReal = computeVWCorrelationField({ dx: 5, W: 6, V: 0.8, c: 1, tSend: 2 });
+    check('Sub-c: W=6 ⇒ NO_REAL_CORRIDOR (isRealCorridor=false)',
+      noReal.className === 'NO_REAL_CORRIDOR' && !noReal.isRealCorridor, noReal.className);
+
+    const limit = computeVWCorrelationField({ dx: 5, W: 4, V: 1.0, c: 1, tSend: 2 });
+    check('Sub-c: v=1.0c ⇒ LIGHT_SPEED_LIMIT, isSubC=false',
+      limit.className === 'LIGHT_SPEED_LIMIT' && limit.isSubC === false, limit.className);
+  }
+
+  // ---- V–W correlation field (β²+η²) ---------------------------------------
+  {
+    const f1 = computeVWCorrelationField({ dx: 5, W: 4, c: 1, V: 0.8 });
+    check('V–W field: D=5,W=4,V=0.8 ⇒ β²+η²=1.28 ⇒ SUBC_BEATS_LIGHT',
+      f1.className === 'SUBC_BEATS_LIGHT' && near(f1.fieldScore, 1.28) && f1.margin > 0,
+      `score=${f1.fieldScore.toFixed(3)}, ${f1.className}`);
+
+    const f2 = computeVWCorrelationField({ dx: 5, W: 2, c: 1, V: 0.8 });
+    check('V–W field: D=5,W=2,V=0.8 ⇒ β²+η²=0.80 ⇒ SUBC_TOO_SLOW',
+      f2.className === 'SUBC_TOO_SLOW' && near(f2.fieldScore, 0.8) && f2.margin < 0,
+      `score=${f2.fieldScore.toFixed(3)}, ${f2.className}`);
+
+    const f3 = computeVWCorrelationField({ dx: 5, W: 3, c: 1, V: 0.8 });
+    check('V–W field: D=5,W=3,V=0.8 ⇒ β²+η²=1.0 ⇒ EQUAL_TO_LIGHT_BASELINE',
+      f3.className === 'EQUAL_TO_LIGHT_BASELINE' && near(f3.fieldScore, 1, 1e-6),
+      `score=${f3.fieldScore.toFixed(6)}, ${f3.className}`);
+
+    const f4 = computeVWCorrelationField({ dx: 5, W: 5, c: 1, V: 0.8 });
+    check('V–W field: W=5 (η=1) ⇒ KIDI_BOUNDARY', f4.className === 'KIDI_BOUNDARY', f4.className);
+
+    const f5 = computeVWCorrelationField({ dx: 5, W: 6, c: 1, V: 0.8 });
+    check('V–W field: W=6 (η=1.2) ⇒ NO_REAL_CORRIDOR', f5.className === 'NO_REAL_CORRIDOR', f5.className);
+
+    // integration: Diagnostics carries the field (default β_sub=0.8, paradox W=√24≈4.9)
+    check('V–W field integration: shortcut phase (W=4, v=0.8c) is SUBC_BEATS_LIGHT in Diagnostics',
+      d1.vwCorrelation.className === 'SUBC_BEATS_LIGHT', d1.vwCorrelation.className);
+  }
+
+  return r;
+}
+
+/** Convenience: true if every test passes. */
+function allPass(results: TestResult[]): boolean {
+  return results.every((t) => t.pass);
+}
+
+
+// ===================== src/components/DiagnosticsPanel.tsx =====================
+/**
+ * DiagnosticsPanel — the typed numeric readout. Shows the split-complex
+ * invariant, the 5D diagnostic, the signal result, the escalation order, and
+ * the typed arrival value (Real / Singular / Bottom). Contradictions are shown,
+ * never hidden.
+ */
+
+
+
+
+interface Props {
+  diag: Diagnostics;
+}
+
+const PROJECTION_COLOR: Record<ProjectionClass, string> = {
+  LIGHT_SPEED: '#3fd0ff',
+  PROJECTED_SUPERLUMINAL: '#56e39f',
+  KIDI_BOUNDARY: '#ffd23b',
+  W_DOMAIN_NO_REAL_DT: '#e23bd0',
+  UNDEFINED_DX: '#ff6b6b',
+};
+
+const PROJECTION_LABEL: Record<ProjectionClass, string> = {
+  LIGHT_SPEED: 'Light-speed (β=1)',
+  PROJECTED_SUPERLUMINAL: 'Projected superluminal',
+  KIDI_BOUNDARY: 'Kidi Boundary',
+  W_DOMAIN_NO_REAL_DT: 'W domain — no real projected dt',
+  UNDEFINED_DX: 'Undefined (dx→0)',
+};
+
+const VW_COLOR: Record<VWCorrelationClass, string> = {
+  SUBC_BEATS_LIGHT: '#ffd23b',
+  EQUAL_TO_LIGHT_BASELINE: '#3fd0ff',
+  SUBC_TOO_SLOW: '#6f9bdc',
+  KIDI_BOUNDARY: '#ff9d3b',
+  NO_REAL_CORRIDOR: '#e23bd0',
+  LIGHT_SPEED_LIMIT: '#ffb13b',
+  INVALID_INPUT: '#ff6b6b',
+};
+
+const VW_LABEL: Record<VWCorrelationClass, string> = {
+  SUBC_BEATS_LIGHT: 'Sub-c beats light',
+  EQUAL_TO_LIGHT_BASELINE: 'Equal to light baseline',
+  SUBC_TOO_SLOW: 'Too slow',
+  KIDI_BOUNDARY: 'Kidi Boundary',
+  NO_REAL_CORRIDOR: 'No real corridor',
+  LIGHT_SPEED_LIMIT: 'Light-speed limit (V≥c)',
+  INVALID_INPUT: 'Invalid input',
+};
+
+const domainColor = (d: Domain) =>
+  d === 'REAL_DOMAIN' ? '#56e39f' : d === 'SINGULAR_BOUNDARY' ? '#ffd23b' : '#e23bd0';
+
+function orderLabel(order: number): string {
+  if (!Number.isFinite(order)) return '⊥  (Bottom / contradiction)';
+  if (order === 0) return '0  (Real domain)';
+  if (order === 0.5) return '½  (boundary touch)';
+  if (order === 1) return '1  (reverse-arrival paradox)';
+  return String(order);
+}
+
+function valueColor(v: SingularValue): string {
+  if (v.kind === 'Real') return '#9fe8c4';
+  if (v.kind === 'Singular') return '#ffd23b';
+  return '#ff6b6b';
+}
+
+function DiagnosticsPanel({ diag }: Props) {
+  const Row = ({ label, children }: { label: string; children: any }) => (
+    <div className="diag-row">
+      <span className="diag-label">{label}</span>
+      <span className="diag-val">{children}</span>
+    </div>
+  );
+
+  const lb = diag.lightBaseline;
+  const lightArrival = lb.tLightArrival.kind === 'Real' ? lb.tLightArrival.value : null;
+  const currentArrival = diag.arrival.kind === 'Real' ? diag.arrival.value : null;
+  const gain = lightArrival !== null && currentArrival !== null ? lightArrival - currentArrival : null;
+  const gainText =
+    gain === null ? 'current arrival is typed kidi/non-real; gain not a normal real number'
+    : Math.abs(gain) < 1e-9 ? 'matches light baseline'
+    : gain > 0 ? `arrives before light baseline by ${gain.toFixed(3)}`
+    : `arrives after light baseline by ${Math.abs(gain).toFixed(3)}`;
+
+  const vc = diag.vwCorrelation;
+  const wMin = Number.isFinite(vc.etaThreshold) ? vc.D * vc.etaThreshold : NaN;
+  const validW = Number.isFinite(wMin) ? `${wMin.toFixed(3)} < |W| < ${vc.D.toFixed(3)}` : 'n/a (V≥c)';
+  const vMin = Number.isFinite(vc.betaThreshold) ? vc.c * vc.betaThreshold : NaN;
+  const validV = Number.isFinite(vMin) ? `${vMin.toFixed(3)} < V < ${vc.c.toFixed(3)}` : 'n/a (|W|≥|dx|)';
+
+  return (
+    <div className="panel diagnostics">
+      <h3>Diagnostics</h3>
+
+      <div className="diag-group">
+        <div className="diag-group-title">Geometry — split-complex z = x + jα</div>
+        <Row label="Δ_split = x²−α²">{diag.deltaSplit.toFixed(4)}</Row>
+        <Row label="domain">
+          <span style={{ color: domainColor(diag.splitDomain) }}>{diag.splitDomain}</span>
+        </Row>
+      </div>
+
+      <div className="diag-group">
+        <div className="diag-group-title">5D diagnostic — ds²=c²dt²−dr²+dα²</div>
+        <Row label="v (3-speed)">{fmt(diag.kinematics.v)}</Row>
+        <Row label="u = dα/dt">{fmt(diag.kinematics.u)}</Row>
+        <Row label="Δ₅D = 1−(v²−u²)/c²">{diag.delta5D.toFixed(4)}</Row>
+        <Row label="γ₅D">
+          <span style={{ color: valueColor(diag.gamma5D) }}>{format(diag.gamma5D)}</span>
+        </Row>
+        <Row label="domain">
+          <span style={{ color: domainColor(diag.gamma5DDomain) }}>{diag.gamma5DDomain}</span>
+        </Row>
+      </div>
+
+      <div className="diag-group">
+        <div className="diag-group-title">Signal — |dt|=√(dx²−dα²)/c</div>
+        <Row label="dx, dα">{`${fmt(diag.signal.dx)}, ${fmt(diag.signal.dAlpha)}`}</Row>
+        <Row label="dx²−dα²">{diag.signal.underRoot.toFixed(4)}</Row>
+        <Row label="branch">{diag.phase.branch}</Row>
+        <Row label="|dt_signal|">
+          <span style={{ color: valueColor(diag.signal.dtSignal) }}>{format(diag.signal.dtSignal)}</span>
+        </Row>
+        <Row label="arrival t">
+          <span style={{ color: valueColor(diag.arrival) }}>{format(diag.arrival)}</span>
+        </Row>
+        <Row label="reverse?">
+          <span style={{ color: diag.reverse ? '#ff7a3b' : '#9fe8c4' }}>
+            {diag.reverse ? 'YES — reverse-time arrival' : 'no'}
+          </span>
+        </Row>
+      </div>
+
+      <div className="diag-group">
+        <div className="diag-group-title">Light-Speed Reference Baseline</div>
+        <Row label="dx">{fmt(lb.dx)}</Row>
+        <Row label="c">{fmt(lb.c)}</Row>
+        <Row label="dt_light = |dx|/c">
+          <span style={{ color: valueColor(lb.dtLight) }}>{format(lb.dtLight)}</span>
+        </Row>
+        <Row label="t_light_arrival">
+          <span style={{ color: valueColor(lb.tLightArrival) }}>{format(lb.tLightArrival)}</span>
+        </Row>
+        <Row label="β_light">{Number.isFinite(lb.beta) ? lb.beta : '—'}</Row>
+        <Row label="current arrival">
+          <span style={{ color: valueColor(diag.arrival) }}>{format(diag.arrival)}</span>
+        </Row>
+        <Row label="vs light">
+          <span style={{ color: gain === null ? '#ffd23b' : gain > 1e-9 ? '#9fe8c4' : gain < -1e-9 ? '#ff7a3b' : '#9fb6d6' }}>
+            {gainText}
+          </span>
+        </Row>
+        {lb.warning && <div className="diag-warn">{lb.warning}</div>}
+        <div className="diag-note">
+          The α=0 light baseline is a fixed comparison ruler — not a photon rest frame and
+          not a new coordinate system.
+        </div>
+      </div>
+
+      <div className="diag-group">
+        <div className="diag-group-title">Kidi Light-Speed Projection</div>
+        <Row label="c (constant)">{fmt(diag.projection.c)}</Row>
+        <Row label="Δ_signal = dx²−dW²">{diag.projection.deltaSignal.toFixed(4)}</Row>
+        <Row label="η = |dW|/|dx|">{fmt(diag.projection.eta)}</Row>
+        <Row label="ρ = Δ_signal/dx²">{fmt(diag.projection.rho)}</Row>
+        <Row label="β_equiv = v_equiv/c">
+          {diag.projection.isRealProjection ? (
+            <span style={{ color: valueColor(diag.projection.betaEquiv) }}>{format(diag.projection.betaEquiv)}</span>
+          ) : (
+            <span style={{ color: '#ffd23b' }}>Kidi-tagged / non-real</span>
+          )}
+        </Row>
+        <Row label="v_equiv">
+          {diag.projection.isRealProjection ? (
+            <span style={{ color: valueColor(diag.projection.vEquiv) }}>{format(diag.projection.vEquiv)}</span>
+          ) : (
+            <span style={{ color: '#ffd23b' }}>not a real speed</span>
+          )}
+        </Row>
+        <Row label="real projection?">
+          <span style={{ color: diag.projection.isRealProjection ? '#9fe8c4' : '#e23bd0' }}>
+            {diag.projection.isRealProjection ? 'yes' : 'no'}
+          </span>
+        </Row>
+        <Row label="class">
+          <span style={{ color: PROJECTION_COLOR[diag.projection.className] }}>
+            {PROJECTION_LABEL[diag.projection.className]}
+          </span>
+        </Row>
+        {diag.projection.warning && <div className="diag-warn">{diag.projection.warning}</div>}
+        <div className="diag-note">
+          v_equiv is the equivalent 3D speed needed to reproduce the same arrival time —
+          projected superluminal <em>inside the simulator</em>, not verified real-world FTL.
+        </div>
+      </div>
+
+      <div className="diag-group">
+        <div className="diag-group-title">V–W Correlation Field (reduced Kidi corridor)</div>
+        <Row label="D = |dx|">{fmt(vc.D)}</Row>
+        <Row label="V, c">{`${fmt(vc.V)}, ${fmt(vc.c)}`}</Row>
+        <Row label="β = V/c">{fmt(vc.beta)}</Row>
+        <Row label="η = |W|/D">{fmt(vc.eta)}</Row>
+        <Row label="β² + η²">{Number.isFinite(vc.fieldScore) ? vc.fieldScore.toFixed(3) : '—'}</Row>
+        <Row label="margin = β²+η²−1">
+          <span style={{ color: vc.margin > 1e-6 ? '#9fe8c4' : vc.margin < -1e-6 ? '#6f9bdc' : '#3fd0ff' }}>
+            {Number.isFinite(vc.margin) ? (vc.margin >= 0 ? `+${vc.margin.toFixed(3)}` : vc.margin.toFixed(3)) : '—'}
+          </span>
+        </Row>
+        <Row label="effective distance">
+          <span style={{ color: valueColor(vc.effectiveDistance) }}>{format(vc.effectiveDistance)}</span>
+        </Row>
+        <Row label="valid W region">{validW}</Row>
+        <Row label="valid V region">{validV}</Row>
+        <Row label="t_light = D/c">
+          <span style={{ color: valueColor(vc.dtLight) }}>{format(vc.dtLight)}</span>
+        </Row>
+        <Row label="t_sub-c = D_eff/V">
+          <span style={{ color: valueColor(vc.dtSubC) }}>{format(vc.dtSubC)}</span>
+        </Row>
+        <Row label="gain vs light">
+          <span style={{ color: valueColor(vc.gainVsLight) }}>{format(vc.gainVsLight)}</span>
+        </Row>
+        <Row label="classification">
+          <span style={{ color: VW_COLOR[vc.className] }}>{VW_LABEL[vc.className]}</span>
+        </Row>
+        <div className="diag-note">
+          Higher W/α corridor contribution lowers the local V needed to beat the light baseline.
+          {' '}{vc.message}
+        </div>
+      </div>
+
+      <div className="diag-group">
+        <div className="diag-group-title">Escalation</div>
+        <Row label="singular order λ">
+          <span style={{ color: Number.isFinite(diag.order) ? (diag.order > 0 ? '#ffd23b' : '#9fe8c4') : '#ff6b6b' }}>
+            {orderLabel(diag.order)}
+          </span>
+        </Row>
+        {diag.contradiction && (
+          <Row label="contradiction">
+            <span style={{ color: '#ff6b6b' }}>{format(diag.contradiction)}</span>
+          </Row>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function fmt(n: number): string {
+  if (!Number.isFinite(n)) return n > 0 ? '∞' : '−∞';
+  return Number.isInteger(n) ? n.toString() : n.toFixed(3);
+}
+
+
+// ===================== src/components/EventLog.tsx =====================
+/**
+ * EventLog — append-only, exportable record of simulation events. Rows are
+ * clickable (cross-panel selection); Singular/Bottom events are colour-coded so
+ * contradictions stay visible as data. Includes the Export Event Log JSON action.
+ */
+
+
+
+
+interface Props {
+  events: SimEvent[];
+  selectedEventId: string | null;
+  onSelectEvent: (id: string | null) => void;
+  onExport: () => void;
+}
+
+const levelColor: Record<EventLevel, string> = {
+  info: '#9fb6d6',
+  warn: '#ff7a3b',
+  singular: '#ffd23b',
+  bottom: '#ff6b6b',
+};
+
+const typeIcon: Record<EventType, string> = {
+  SEND: '→',
+  PHASE_CHANGE: '◆',
+  LIGHT_BASELINE: '☀',
+  BOUNDARY_TOUCH: '◈',
+  REVERSE_ARRIVAL: '↺',
+  FEEDBACK_CONTRADICTION: '⊥',
+  RECEIVE: '✓',
+  EXPORT: '⤓',
+};
+
+function EventLog({ events, selectedEventId, onSelectEvent, onExport }: Props) {
+  const bottomRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [events.length]);
+
+  return (
+    <div className="panel eventlog">
+      <div className="panel-head">
+        <h3>Event log</h3>
+        <button className="export-btn" onClick={onExport} disabled={events.length === 0} title="Export Event Log as JSON (E)">
+          ⤓ Export JSON
+        </button>
+      </div>
+      <div className="event-scroll" role="log" aria-label="Simulation events">
+        {events.length === 0 && <div className="event-empty">No events yet — pick a phase and Play.</div>}
+        {events.map((e) => (
+          <div
+            key={e.id}
+            className={`event-row${e.id === selectedEventId ? ' selected' : ''}`}
+            style={{ borderLeftColor: levelColor[e.level] }}
+            onClick={() => onSelectEvent(e.id === selectedEventId ? null : e.id)}
+            tabIndex={0}
+            role="button"
+            onKeyDown={(ev) => {
+              if (ev.key === 'Enter' || ev.key === ' ') {
+                ev.preventDefault();
+                onSelectEvent(e.id === selectedEventId ? null : e.id);
+              }
+            }}
+            title={`${e.id} · typedState ${format(e.typedState)}`}
+          >
+            <span className="event-icon" style={{ color: levelColor[e.level] }}>{typeIcon[e.type]}</span>
+            <span className="event-type" style={{ color: levelColor[e.level] }}>{e.type}</span>
+            <span className="event-at">{e.arrival ? arrivalText(e.arrival) : `t=${e.scenario.tSend}`}</span>
+            <span className="event-msg">{e.message}</span>
+          </div>
+        ))}
+        <div ref={bottomRef} />
+      </div>
+    </div>
+  );
+}
+
+
+// ===================== src/components/VolumeLegend.tsx =====================
+/**
+ * VolumeLegend — explains the 3D visual language in text + swatches. No meaning
+ * is conveyed by colour alone (each row has a label).
+ */
+const ROWS: { color: string; label: string; note: string }[] = [
+  { color: '#3fd0ff', label: 'Real (λ=0)', note: 'ordinary propagation / Bob worldline' },
+  { color: '#ffd23b', label: 'Singular λ=½', note: 'boundary touch — pulses' },
+  { color: '#ff7a3b', label: 'Singular λ=1', note: 'reverse arrival — dashed' },
+  { color: '#e23bd0', label: 'Singular λ>1', note: 'higher order — glow' },
+  { color: '#ff3b3b', label: 'Bottom (⊥)', note: 'feedback contradiction' },
+  { color: '#ff4646', label: 'Singular planes α = ±x', note: 'split-complex null loci' },
+  { color: '#4aa3ff', label: 'Null surfaces', note: 'signal cone from the send event' },
+  { color: '#ff61dc', label: 'Alice worldline', note: 'receiver line in t' },
+];
+
+function VolumeLegend() {
+  return (
+    <div className="volume-legend" aria-label="3D legend">
+      {ROWS.map((r) => (
+        <div className="legend-row" key={r.label}>
+          <span className="legend-swatch" style={{ background: r.color }} aria-hidden="true" />
+          <span className="legend-label">{r.label}</span>
+          <span className="legend-note">{r.note}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+
+// ===================== src/components/HoverInspector.tsx =====================
+/**
+ * HoverInspector — a live, screen-reader-friendly text region that describes the
+ * hovered 3D geometry and the current typed state in plain language. This is the
+ * non-pointer / accessibility fallback for the 3D scene.
+ */
+
+
+
+
+interface Props {
+  diag: Diagnostics;
+  hoverText: string | null;
+  selectedEvent: SimEvent | null;
+}
+
+function HoverInspector({ diag, hoverText, selectedEvent }: Props) {
+  const summary =
+    `Phase ${diag.phase.name}. Split domain ${diag.splitDomain}. ` +
+    `Signal interval dx²−dα² = ${diag.signal.underRoot.toFixed(2)}. ` +
+    `Arrival ${arrivalText(diag.arrival)} (${stateLabel(diag.arrival)}). ` +
+    (diag.reverse ? 'This is a reverse-time arrival. ' : '') +
+    (diag.contradiction ? `Feedback contradiction: ${format(diag.contradiction)}.` : '');
+
+  return (
+    <div className="hover-inspector">
+      <div className="hover-line" aria-live="polite">
+        <span className="hover-label">hover:</span> {hoverText ?? '—'}
+      </div>
+      {selectedEvent && (
+        <div className="hover-line selected">
+          <span className="hover-label">selected:</span> {selectedEvent.type} · {selectedEvent.message}
+        </div>
+      )}
+      <div className="sr-summary" aria-live="polite">{summary}</div>
+    </div>
+  );
+}
+
+
+// ===================== src/components/HelpOverlay.tsx =====================
+/**
+ * HelpOverlay — keyboard shortcut + interaction reference (opened with '?').
+ */
+interface Props {
+  open: boolean;
+  onClose: () => void;
+}
+
+const SHORTCUTS: [string, string][] = [
+  ['Space', 'Play / Pause timeline'],
+  ['R', 'Reset simulation'],
+  ['1 – 5', 'Jump to preset phase'],
+  ['E', 'Export Event Log JSON'],
+  ['C', 'Reset / cycle camera preset'],
+  ['L', 'Toggle history trails'],
+  ['?', 'Open / close this help'],
+  ['Drag', 'Orbit 3D camera'],
+  ['Shift/Right-drag', 'Pan 3D camera'],
+  ['Wheel', 'Zoom 3D camera'],
+  ['Click marker', 'Select corresponding event'],
+];
+
+function HelpOverlay({ open, onClose }: Props) {
+  if (!open) return null;
+  return (
+    <div className="help-overlay" role="dialog" aria-modal="true" aria-label="Keyboard help" onClick={onClose}>
+      <div className="help-card" onClick={(e) => e.stopPropagation()}>
+        <div className="help-head">
+          <h3>Keyboard &amp; interaction</h3>
+          <button onClick={onClose} aria-label="Close help">✕</button>
+        </div>
+        <table>
+          <tbody>
+            {SHORTCUTS.map(([k, v]) => (
+              <tr key={k}>
+                <td><kbd>{k}</kbd></td>
+                <td>{v}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        <p className="help-note">
+          The α-axis is a modeling coordinate for singular structure; +dα² is a speculative
+          two-time signature, not standard special relativity. This is a research visualisation.
+        </p>
+      </div>
+    </div>
+  );
+}
+
+
+// ===================== src/components/SpacetimeCanvas.tsx =====================
+/**
+ * SpacetimeCanvas — main viewport. x (horizontal) vs t (vertical).
+ * Draws Bob/Alice worldlines, the light cone from the send event, the signal
+ * path (forward or reverse), and an animated marker. Reverse arrivals are
+ * flagged in red; a Bottom contradiction shows ⊥.
+ *
+ * Uses a canvas ref + useEffect for synchronization with drawing (WO rendering
+ * requirements). Re-draws whenever diagnostics or animation progress change.
+ */
+
+
+
+interface Props {
+  diag: Diagnostics;
+  /** animation progress 0..1 */
+  progress: number;
+  width: number;
+  height: number;
+  /** optional cross-panel highlight at world point [x, t, alpha] */
+  highlight?: [number, number, number] | null;
+  /** show the ordinary α=0 light-speed reference baseline (default true) */
+  showLightBaseline?: boolean;
+  /** show the gold sub-c corridor arrival path when feasible (default true) */
+  showSubCPath?: boolean;
+}
+
+function SpacetimeCanvas({ diag, progress, width, height, highlight, showLightBaseline = true, showSubCPath = true }: Props) {
+  const ref = useRef<HTMLCanvasElement>(null);
+
+  useEffect(() => {
+    const canvas = ref.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    const dpr = window.devicePixelRatio || 1;
+    canvas.width = width * dpr;
+    canvas.height = height * dpr;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+    const { scenario, signal, arrival, reverse, contradiction } = diag;
+
+    // world ranges
+    const xMin = Math.min(scenario.xBob, scenario.xAlice) - 1.5;
+    const xMax = Math.max(scenario.xBob, scenario.xAlice) + 1.5;
+    const tMin = -1;
+    const tMax = Math.max(scenario.tSend + 6, 9);
+
+    const pad = 42;
+    const W = width - pad * 1.4;
+    const H = height - pad * 1.4;
+    const X = (x: number) => pad + ((x - xMin) / (xMax - xMin)) * W;
+    // t increases upward
+    const Y = (t: number) => pad * 0.4 + H - ((t - tMin) / (tMax - tMin)) * H;
+
+    // background
+    ctx.fillStyle = '#0a0e16';
+    ctx.fillRect(0, 0, width, height);
+
+    // grid
+    ctx.strokeStyle = 'rgba(120,140,170,0.10)';
+    ctx.lineWidth = 1;
+    ctx.font = '10px ui-monospace, monospace';
+    ctx.fillStyle = 'rgba(150,170,200,0.55)';
+    for (let x = Math.ceil(xMin); x <= Math.floor(xMax); x++) {
+      ctx.beginPath();
+      ctx.moveTo(X(x), Y(tMin));
+      ctx.lineTo(X(x), Y(tMax));
+      ctx.stroke();
+      ctx.fillText(`x=${x}`, X(x) + 2, Y(tMin) - 4);
+    }
+    for (let t = Math.ceil(tMin); t <= Math.floor(tMax); t++) {
+      ctx.beginPath();
+      ctx.moveTo(X(xMin), Y(t));
+      ctx.lineTo(X(xMax), Y(t));
+      ctx.stroke();
+      ctx.fillText(`t=${t}`, X(xMin) + 2, Y(t) - 2);
+    }
+
+    // light cone from send event (forward + past), t = tSend ± (x - xBob)/c
+    const sx = scenario.xBob;
+    const st = scenario.tSend;
+    ctx.fillStyle = 'rgba(80,160,255,0.06)';
+    ctx.beginPath();
+    ctx.moveTo(X(sx), Y(st));
+    ctx.lineTo(X(xMax), Y(st + (xMax - sx) / scenario.c));
+    ctx.lineTo(X(xMin), Y(st + (sx - xMin) / scenario.c));
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(80,160,255,0.35)';
+    ctx.setLineDash([4, 4]);
+    [-1, 1].forEach((s) => {
+      ctx.beginPath();
+      ctx.moveTo(X(sx), Y(st));
+      ctx.lineTo(X(xMax), Y(st + (s * (xMax - sx)) / scenario.c));
+      ctx.moveTo(X(sx), Y(st));
+      ctx.lineTo(X(xMin), Y(st + (s * (xMin - sx)) / scenario.c));
+      ctx.stroke();
+    });
+    ctx.setLineDash([]);
+
+    // worldlines
+    const drawWorldline = (x: number, color: string, label: string) => {
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(X(x), Y(tMin));
+      ctx.lineTo(X(x), Y(tMax));
+      ctx.stroke();
+      ctx.fillStyle = color;
+      ctx.font = '12px ui-monospace, monospace';
+      ctx.fillText(label, X(x) - 12, Y(tMax) - 6);
+    };
+    drawWorldline(scenario.xBob, '#3fd0ff', 'Bob');
+    drawWorldline(scenario.xAlice, '#ff61dc', 'Alice');
+
+    // arrival time (numeric) for drawing
+    const arriveT =
+      arrival.kind === 'Real' ? arrival.value
+      : arrival.kind === 'Singular' ? arrival.coeff
+      : st;
+
+    // --- Light-Speed Reference Baseline: ordinary α=0 ray (a fixed comparison ruler) ---
+    const lb = diag.lightBaseline;
+    const lbArrive = lb.tLightArrival.kind === 'Real' ? lb.tLightArrival.value : null;
+    if (showLightBaseline && lbArrive !== null) {
+      ctx.strokeStyle = 'rgba(63,208,255,0.85)';
+      ctx.lineWidth = 1.6;
+      ctx.setLineDash([7, 5]);
+      ctx.beginPath();
+      ctx.moveTo(X(scenario.xBob), Y(st));
+      ctx.lineTo(X(scenario.xAlice), Y(lbArrive));
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.fillStyle = 'rgba(120,210,255,0.95)';
+      ctx.font = '10px ui-monospace, monospace';
+      ctx.fillText('Light baseline α=0, β=1', X(scenario.xAlice) - 4, Y(lbArrive) - 6);
+    }
+
+    // Sub-c corridor arrival path (gold) — local V<c that still beats light
+    const sc = diag.vwCorrelation;
+    if (showSubCPath && sc.className === 'SUBC_BEATS_LIGHT' && sc.tSubCArrival.kind === 'Real') {
+      ctx.strokeStyle = 'rgba(255,205,60,0.95)';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(X(scenario.xBob), Y(st));
+      ctx.lineTo(X(scenario.xAlice), Y(sc.tSubCArrival.value));
+      ctx.stroke();
+      ctx.fillStyle = 'rgba(255,220,120,0.95)';
+      ctx.font = '10px ui-monospace, monospace';
+      ctx.fillText(`sub-c corridor (v=${sc.beta.toFixed(2)}c)`, X(scenario.xAlice) - 4, Y(sc.tSubCArrival.value) + 14);
+    }
+
+    // signal path — coloured by projection class / escalation state
+    const proj = diag.projection.className;
+    const noReal = arrival.kind !== 'Real'; // W-domain / kidi: no honest real arrival
+    const pathColor = contradiction
+      ? '#ff3b3b'
+      : reverse
+      ? '#ff7a3b'
+      : signal.domain === 'SINGULAR_BOUNDARY'
+      ? '#ffd23b'
+      : proj === 'PROJECTED_SUPERLUMINAL'
+      ? '#b06bff'
+      : '#56e39f';
+    ctx.strokeStyle = pathColor;
+    ctx.lineWidth = 2.5;
+    if (noReal && !reverse) {
+      // W_DOMAIN_NO_REAL_DT / boundary: do not imply a real arrival — dashed + blocked
+      ctx.setLineDash([4, 4]);
+    }
+    ctx.beginPath();
+    ctx.moveTo(X(scenario.xBob), Y(st));
+    ctx.lineTo(X(scenario.xAlice), Y(arriveT));
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    // send event
+    const dot = (x: number, t: number, color: string, r = 5) => {
+      ctx.fillStyle = color;
+      ctx.beginPath();
+      ctx.arc(X(x), Y(t), r, 0, Math.PI * 2);
+      ctx.fill();
+    };
+    dot(scenario.xBob, st, '#3fd0ff', 5);
+    ctx.fillStyle = '#cfe';
+    ctx.font = '11px ui-monospace, monospace';
+    ctx.fillText('SEND', X(scenario.xBob) + 8, Y(st) + 4);
+
+    // animated marker along path
+    const mp = Math.max(0, Math.min(1, progress));
+    const mx = scenario.xBob + mp * (scenario.xAlice - scenario.xBob);
+    const mt = st + mp * (arriveT - st);
+    dot(mx, mt, '#ffffff', 4);
+
+    // arrival event
+    dot(scenario.xAlice, arriveT, pathColor, 6);
+    if (contradiction) {
+      ctx.fillStyle = '#ff3b3b';
+      ctx.font = 'bold 14px ui-monospace, monospace';
+      ctx.fillText('⊥ CONTRADICTION', X(scenario.xAlice) - 30, Y(arriveT) - 10);
+    } else if (reverse) {
+      ctx.strokeStyle = '#ff3b3b';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(X(scenario.xAlice), Y(arriveT), 11, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.fillStyle = '#ff7a3b';
+      ctx.font = 'bold 12px ui-monospace, monospace';
+      ctx.fillText('REVERSE ↓', X(scenario.xAlice) + 10, Y(arriveT) + 4);
+    } else if (noReal) {
+      ctx.strokeStyle = '#e23bd0';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(X(scenario.xAlice), Y(arriveT), 10, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.fillStyle = '#e6a3df';
+      ctx.font = '11px ui-monospace, monospace';
+      ctx.fillText('no real dt', X(scenario.xAlice) + 10, Y(arriveT) + 4);
+    } else {
+      ctx.fillStyle = '#cfe';
+      ctx.font = '11px ui-monospace, monospace';
+      ctx.fillText('RECEIVE', X(scenario.xAlice) + 10, Y(arriveT) + 4);
+    }
+
+    // cross-panel highlight ring
+    if (highlight && Number.isFinite(highlight[0]) && Number.isFinite(highlight[1])) {
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(X(highlight[0]), Y(highlight[1]), 13, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+
+    // title + gain-vs-light readout
+    ctx.fillStyle = 'rgba(180,200,230,0.85)';
+    ctx.font = '12px ui-monospace, monospace';
+    ctx.fillText('Spacetime (x, t)  —  light cone dashed', pad, 16);
+    if (lbArrive !== null) {
+      let gainText: string;
+      if (arrival.kind === 'Real') {
+        const gain = lbArrive - arrival.value;
+        gainText =
+          Math.abs(gain) < 1e-9 ? 'matches light baseline'
+          : gain > 0 ? `arrives ${gain.toFixed(3)} before light baseline`
+          : `arrives ${Math.abs(gain).toFixed(3)} after light baseline`;
+      } else {
+        gainText = 'current arrival is typed kidi/non-real';
+      }
+      ctx.fillStyle = 'rgba(120,210,255,0.9)';
+      ctx.font = '10px ui-monospace, monospace';
+      const lbStr = Number.isInteger(lbArrive) ? String(lbArrive) : lbArrive.toFixed(3);
+      ctx.fillText(`vs light (t=${lbStr}): ${gainText}`, pad, 29);
+    }
+  }, [diag, progress, width, height, highlight, showLightBaseline, showSubCPath]);
+
+  return <canvas ref={ref} style={{ width, height, borderRadius: 8 }} />;
+}
+
+
+// ===================== src/components/AlphaPlaneCanvas.tsx =====================
+/**
+ * AlphaPlaneCanvas — auxiliary viewport for the split-complex geometry.
+ * Axes: x (horizontal, cyan) vs α (vertical, violet). Draws the two null lines
+ * α = ±x (red), shades the wedge x²−α²>0 (teal, REAL) and x²−α²<0 (magenta,
+ * ALPHA), and plots the signal trajectory (0,0)→(Δx, α) with an animated marker.
+ *
+ * Colour encoding follows the critique (p.13): hue ↔ sign(Δ_split), the marker
+ * pulses on the SINGULAR_BOUNDARY.
+ */
+
+
+
+interface Props {
+  diag: Diagnostics;
+  progress: number;
+  /** wall-clock phase for the pulse animation */
+  pulse: number;
+  width: number;
+  height: number;
+  /** optional cross-panel highlight at world point [x, t, alpha] */
+  highlight?: [number, number, number] | null;
+}
+
+function AlphaPlaneCanvas({ diag, progress, pulse, width, height, highlight }: Props) {
+  const ref = useRef<HTMLCanvasElement>(null);
+
+  useEffect(() => {
+    const canvas = ref.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    const dpr = window.devicePixelRatio || 1;
+    canvas.width = width * dpr;
+    canvas.height = height * dpr;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+    const dx = diag.signal.dx;
+    const aMax = Math.max(8, Math.abs(diag.phase.alpha) + 2, Math.abs(dx) + 2);
+    const xMin = -1.5;
+    const xMax = Math.max(dx + 2, aMax);
+    const aMin = -aMax;
+    const aHi = aMax;
+
+    const pad = 38;
+    const W = width - pad * 1.4;
+    const H = height - pad * 1.4;
+    const X = (x: number) => pad + ((x - xMin) / (xMax - xMin)) * W;
+    const A = (a: number) => pad * 0.4 + H - ((a - aMin) / (aHi - aMin)) * H;
+
+    // background
+    ctx.fillStyle = '#0a0e16';
+    ctx.fillRect(0, 0, width, height);
+
+    // shade regions by sampling sign(x²−α²) — coarse grid of translucent cells
+    const cells = 60;
+    const cw = W / cells;
+    const ch = H / cells;
+    for (let i = 0; i < cells; i++) {
+      for (let k = 0; k < cells; k++) {
+        const x = xMin + ((i + 0.5) / cells) * (xMax - xMin);
+        const a = aMin + ((k + 0.5) / cells) * (aHi - aMin);
+        const d = x * x - a * a;
+        if (Math.abs(d) < 0.25) continue; // leave boundary clear
+        ctx.fillStyle = d > 0 ? 'rgba(40,180,150,0.10)' : 'rgba(200,60,170,0.10)';
+        ctx.fillRect(pad + i * cw, pad * 0.4 + k * ch, cw + 1, ch + 1);
+      }
+    }
+
+    // axes
+    ctx.strokeStyle = 'rgba(63,208,255,0.55)'; // x-axis cyan
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(X(xMin), A(0));
+    ctx.lineTo(X(xMax), A(0));
+    ctx.stroke();
+    ctx.strokeStyle = 'rgba(170,120,255,0.55)'; // α-axis violet
+    ctx.beginPath();
+    ctx.moveTo(X(0), A(aMin));
+    ctx.lineTo(X(0), A(aHi));
+    ctx.stroke();
+
+    // null lines α = ±x (red)
+    ctx.strokeStyle = 'rgba(255,70,70,0.9)';
+    ctx.lineWidth = 2;
+    ctx.setLineDash([6, 4]);
+    ctx.beginPath();
+    ctx.moveTo(X(xMin), A(xMin));
+    ctx.lineTo(X(xMax), A(xMax));
+    ctx.moveTo(X(xMin), A(-xMin));
+    ctx.lineTo(X(xMax), A(-xMax));
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle = 'rgba(255,120,120,0.9)';
+    ctx.font = '11px ui-monospace, monospace';
+    ctx.fillText('α = x', X(xMax) - 40, A(xMax) + 14);
+    ctx.fillText('α = −x', X(xMax) - 44, A(-xMax) - 6);
+
+    // signal trajectory (0,0) → (dx, alpha)
+    const alpha = diag.phase.alpha;
+    ctx.strokeStyle = 'rgba(220,230,255,0.5)';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(X(0), A(0));
+    ctx.lineTo(X(dx), A(alpha));
+    ctx.stroke();
+
+    // endpoint P = (dx, alpha), coloured by domain
+    const domColor =
+      diag.splitDomain === 'REAL_DOMAIN' ? '#56e39f'
+      : diag.splitDomain === 'SINGULAR_BOUNDARY' ? '#ffd23b'
+      : '#e23bd0';
+    ctx.fillStyle = domColor;
+    ctx.beginPath();
+    ctx.arc(X(dx), A(alpha), 5, 0, Math.PI * 2);
+    ctx.fill();
+
+    // animated marker along trajectory, pulses on boundary
+    const mp = Math.max(0, Math.min(1, progress));
+    const mx = mp * dx;
+    const ma = mp * alpha;
+    const onBoundary = diag.splitDomain === 'SINGULAR_BOUNDARY';
+    const pr = onBoundary ? 5 + 3 * (0.5 + 0.5 * Math.sin(pulse * 6)) : 4;
+    ctx.fillStyle = '#ffffff';
+    ctx.beginPath();
+    ctx.arc(X(mx), A(ma), pr, 0, Math.PI * 2);
+    ctx.fill();
+    if (onBoundary) {
+      ctx.strokeStyle = '#ffd23b';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(X(dx), A(alpha), 10 + 4 * (0.5 + 0.5 * Math.sin(pulse * 6)), 0, Math.PI * 2);
+      ctx.stroke();
+    }
+
+    // cross-panel highlight ring at (x, alpha)
+    if (highlight && Number.isFinite(highlight[0]) && Number.isFinite(highlight[2])) {
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(X(highlight[0]), A(highlight[2]), 13, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+
+    // labels
+    ctx.fillStyle = 'rgba(180,200,230,0.85)';
+    ctx.font = '12px ui-monospace, monospace';
+    ctx.fillText('Split plane (x, α)  z = x + jα,  j²=1', pad, 16);
+    ctx.fillStyle = domColor;
+    ctx.font = '11px ui-monospace, monospace';
+    ctx.fillText(
+      `Δ_split = x²−α² = ${diag.deltaSplit.toFixed(2)}  [${diag.splitDomain}]`,
+      X(dx) + 8,
+      A(alpha) - 6,
+    );
+    // teal/magenta legend
+    ctx.fillStyle = 'rgba(86,227,159,0.9)';
+    ctx.fillText('teal: x²−α²>0 (Real)', pad, height - 22);
+    ctx.fillStyle = 'rgba(226,59,208,0.9)';
+    ctx.fillText('magenta: x²−α²<0 (Alpha)', pad, height - 8);
+  }, [diag, progress, pulse, width, height, highlight]);
+
+  return <canvas ref={ref} style={{ width, height, borderRadius: 8 }} />;
+}
+
+
+// ===================== src/components/ProjectionSpeedCanvas.tsx =====================
+/**
+ * ProjectionSpeedCanvas — "Kidi Light-Speed Projection".
+ *
+ * A faux-3D speed surface over axes  X = |dx|,  Z = |W|=|alpha|,  Y = beta_equiv.
+ * Shows the glowing beta = 1 reference plane (light-speed constant c), the rising
+ * speed surface beta = |dx| / sqrt(dx^2 - dW^2), the bright Kidi boundary edge
+ * where |dW| = |dx|, the shaded no-real-projection region |dW| > |dx|, and the
+ * current scenario marker.
+ *
+ * beta>1 is a PROJECTION statement inside the speculative model, not verified FTL.
+ */
+
+
+
+
+interface Props {
+  diag: Diagnostics;
+  width: number;
+  height: number;
+  pulse: number;
+}
+
+const CLASS_COLOR: Record<ProjectionClass, string> = {
+  LIGHT_SPEED: '#3fd0ff',
+  PROJECTED_SUPERLUMINAL: '#56e39f',
+  KIDI_BOUNDARY: '#ffd23b',
+  W_DOMAIN_NO_REAL_DT: '#e23bd0',
+  UNDEFINED_DX: '#ff6b6b',
+};
+
+const CLASS_LABEL: Record<ProjectionClass, string> = {
+  LIGHT_SPEED: 'LIGHT-SPEED (β=1)',
+  PROJECTED_SUPERLUMINAL: 'PROJECTED SUPERLUMINAL (β>1)',
+  KIDI_BOUNDARY: 'KIDI BOUNDARY (Δ_signal=0)',
+  W_DOMAIN_NO_REAL_DT: 'W DOMAIN — no real projected dt',
+  UNDEFINED_DX: 'UNDEFINED (dx→0)',
+};
+
+const BETA_MAX = 6;
+
+function ProjectionSpeedCanvas({ diag, width, height, pulse }: Props) {
+  const ref = useRef<HTMLCanvasElement>(null);
+
+  useEffect(() => {
+    const canvas = ref.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    const dpr = window.devicePixelRatio || 1;
+    canvas.width = width * dpr;
+    canvas.height = height * dpr;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+    const pj = diag.projection;
+    const dxAbs = Math.abs(pj.dx);
+    const dwAbs = Math.abs(pj.dW);
+
+    const xMax = Math.max(dxAbs * 1.6, dwAbs * 1.2, 6);
+    const zMax = xMax;
+
+    // oblique projection params
+    const padL = 60, padT = 30, padB = 36, padR = 24;
+    const plotW = width - padL - padR;
+    const plotH = height - padT - padB;
+    const A = (28 * Math.PI) / 180;
+    const kx = (plotW * 0.62) / xMax;
+    const depth = plotW * 0.32;
+    const kz = depth / zMax;
+    const ky = (plotH * 0.80) / BETA_MAX;
+    const baseY = padT + plotH * 0.94;
+    const baseX = padL + 6;
+    const PX = (X: number, Z: number) => baseX + X * kx + Z * kz * Math.cos(A);
+    const PY = (X: number, Z: number, Y: number) => baseY - Y * ky - Z * kz * Math.sin(A);
+
+    // background
+    ctx.fillStyle = '#0a0e16';
+    ctx.fillRect(0, 0, width, height);
+
+    // floor grid (beta=0)
+    ctx.strokeStyle = 'rgba(120,140,170,0.12)';
+    ctx.lineWidth = 1;
+    const NX = 8, NZ = 8;
+    for (let i = 0; i <= NX; i++) {
+      const X = (i / NX) * xMax;
+      ctx.beginPath(); ctx.moveTo(PX(X, 0), PY(X, 0, 0)); ctx.lineTo(PX(X, zMax), PY(X, zMax, 0)); ctx.stroke();
+    }
+    for (let k = 0; k <= NZ; k++) {
+      const Z = (k / NZ) * zMax;
+      ctx.beginPath(); ctx.moveTo(PX(0, Z), PY(0, Z, 0)); ctx.lineTo(PX(xMax, Z), PY(xMax, Z, 0)); ctx.stroke();
+    }
+
+    // no-real-projection region |Z| > |X| (floor triangle beyond the diagonal)
+    ctx.fillStyle = 'rgba(226,59,208,0.14)';
+    ctx.beginPath();
+    ctx.moveTo(PX(0, 0), PY(0, 0, 0));
+    ctx.lineTo(PX(0, zMax), PY(0, zMax, 0));
+    ctx.lineTo(PX(xMax, zMax), PY(xMax, zMax, 0));
+    // back to diagonal Z=X at X=xMax... close along Z=X
+    ctx.lineTo(PX(xMax, xMax), PY(xMax, xMax, 0));
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = 'rgba(226,59,208,0.85)';
+    ctx.font = '10px ui-monospace, monospace';
+    ctx.fillText('W domain', PX(0.4, zMax * 0.78), PY(0.4, zMax * 0.78, 0));
+    ctx.fillText('no real dt', PX(0.4, zMax * 0.78) , PY(0.4, zMax * 0.78, 0) + 12);
+
+    // beta = 1 reference plane (light-speed constant c)
+    ctx.fillStyle = 'rgba(63,208,255,0.10)';
+    ctx.beginPath();
+    ctx.moveTo(PX(0, 0), PY(0, 0, 1));
+    ctx.lineTo(PX(xMax, 0), PY(xMax, 0, 1));
+    ctx.lineTo(PX(xMax, zMax), PY(xMax, zMax, 1));
+    ctx.lineTo(PX(0, zMax), PY(0, zMax, 1));
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(63,208,255,0.7)';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(PX(0, 0), PY(0, 0, 1)); ctx.lineTo(PX(xMax, 0), PY(xMax, 0, 1)); ctx.stroke();
+    ctx.fillStyle = '#9fe0ff';
+    ctx.font = '11px ui-monospace, monospace';
+    ctx.fillText('Light-speed reference · β = 1', PX(xMax * 0.06, 0), PY(xMax * 0.06, 0, 1) - 6);
+    ctx.fillStyle = 'rgba(120,200,240,0.7)';
+    ctx.font = '9px ui-monospace, monospace';
+    ctx.fillText('cyan β=1 plane = ordinary α=0 light baseline', padL, height - 22);
+
+    // speed surface beta = X / sqrt(X^2 - Z^2), as constant-X "fins"
+    const fins = 9;
+    for (let i = 1; i <= fins; i++) {
+      const X = (i / fins) * xMax;
+      ctx.strokeStyle = `rgba(86,227,159,${0.30 + 0.5 * (i / fins)})`;
+      ctx.lineWidth = 1.4;
+      ctx.beginPath();
+      let started = false;
+      const steps = 40;
+      for (let s = 0; s <= steps; s++) {
+        const Z = (s / steps) * X * 0.985;
+        const d = X * X - Z * Z;
+        if (d <= 1e-9) break;
+        const beta = Math.min(BETA_MAX, X / Math.sqrt(d));
+        const x = PX(X, Z), y = PY(X, Z, beta);
+        if (!started) { ctx.moveTo(x, y); started = true; } else ctx.lineTo(x, y);
+      }
+      ctx.stroke();
+    }
+
+    // Kidi boundary edge: the diagonal Z=X, rising wall to BETA_MAX
+    ctx.strokeStyle = '#ffd23b';
+    ctx.lineWidth = 2.4;
+    ctx.beginPath();
+    ctx.moveTo(PX(0, 0), PY(0, 0, 0));
+    ctx.lineTo(PX(xMax, xMax), PY(xMax, xMax, 0));
+    ctx.stroke();
+    // wall at the diagonal (pulse)
+    const wallPulse = 0.5 + 0.4 * Math.sin(pulse * 4);
+    ctx.strokeStyle = `rgba(255,210,59,${wallPulse})`;
+    ctx.lineWidth = 1.2;
+    for (let s = 1; s <= 6; s++) {
+      const X = (s / 6) * xMax;
+      ctx.beginPath();
+      ctx.moveTo(PX(X, X), PY(X, X, 0));
+      ctx.lineTo(PX(X, X), PY(X, X, BETA_MAX));
+      ctx.stroke();
+    }
+    ctx.fillStyle = '#ffd23b';
+    ctx.font = '11px ui-monospace, monospace';
+    ctx.fillText('Kidi Boundary  Δ_signal = 0', PX(xMax, xMax) - 150, PY(xMax, xMax, BETA_MAX) + 14);
+
+    // axes labels
+    ctx.fillStyle = 'rgba(180,200,230,0.85)';
+    ctx.font = '11px ui-monospace, monospace';
+    ctx.fillText('|dx|', PX(xMax, 0) + 4, PY(xMax, 0, 0) + 4);
+    ctx.fillStyle = 'rgba(170,120,255,0.9)';
+    ctx.fillText('|W| = |α|', PX(0, zMax) - 6, PY(0, zMax, 0) + 14);
+    ctx.fillStyle = 'rgba(86,227,159,0.95)';
+    ctx.save();
+    ctx.translate(padL - 44, padT + plotH * 0.4);
+    ctx.rotate(-Math.PI / 2);
+    ctx.fillText('β = v/c', 0, 0);
+    ctx.restore();
+
+    // current marker — height depends on the projection class
+    const color = CLASS_COLOR[pj.className];
+    if (pj.className !== 'UNDEFINED_DX' && Number.isFinite(dxAbs)) {
+      const Xc = Math.min(dxAbs, xMax);
+      const Zc = Math.min(dwAbs, zMax);
+      let Yc: number;
+      if (pj.className === 'W_DOMAIN_NO_REAL_DT') {
+        Yc = 0; // no real β — sits on the floor in the magenta no-real region
+      } else if (pj.className === 'KIDI_BOUNDARY') {
+        Yc = BETA_MAX; // diverging — at the top of the kidi wall
+      } else {
+        Yc = pj.betaEquiv.kind === 'Real' ? Math.min(BETA_MAX, pj.betaEquiv.value) : BETA_MAX;
+      }
+      // drop line
+      ctx.strokeStyle = color; ctx.lineWidth = 1; ctx.setLineDash([3, 3]);
+      ctx.beginPath(); ctx.moveTo(PX(Xc, Zc), PY(Xc, Zc, 0)); ctx.lineTo(PX(Xc, Zc), PY(Xc, Zc, Yc)); ctx.stroke();
+      ctx.setLineDash([]);
+      // marker
+      const pulsing = pj.className === 'KIDI_BOUNDARY';
+      const r = pulsing ? 5 + 3 * (0.5 + 0.5 * Math.sin(pulse * 6)) : 5;
+      ctx.fillStyle = color;
+      ctx.beginPath(); ctx.arc(PX(Xc, Zc), PY(Xc, Zc, Yc), r, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.2; ctx.stroke();
+      if (pj.className === 'W_DOMAIN_NO_REAL_DT') {
+        ctx.fillStyle = color;
+        ctx.font = '9px ui-monospace, monospace';
+        ctx.fillText('no real dt', PX(Xc, Zc) + 8, PY(Xc, Zc, 0));
+      }
+    }
+
+    // title + readout
+    ctx.fillStyle = 'rgba(180,200,230,0.9)';
+    ctx.font = '12px ui-monospace, monospace';
+    ctx.fillText('Kidi Light-Speed Projection', padL, 16);
+    ctx.fillStyle = color;
+    ctx.font = 'bold 11px ui-monospace, monospace';
+    const betaText =
+      pj.betaEquiv.kind === 'Real' ? `β=${pj.betaEquiv.value.toFixed(3)}`
+      : pj.betaEquiv.kind === 'Singular' ? `β=Singular(σ^½)` : 'β=⊥';
+    ctx.fillText(`${CLASS_LABEL[pj.className]}   ${betaText}`, padL, height - 8);
+  }, [diag, width, height, pulse]);
+
+  return <canvas ref={ref} style={{ width, height, borderRadius: 8 }} />;
+}
+
+
+// ===================== src/components/VWCorrelationFieldPanel.tsx =====================
+/**
+ * VWCorrelationFieldPanel — the Kidi V–W Correlation Field (core feasibility proof).
+ *
+ * A continuous feasibility map, not a single-value calculator. Reduced layer:
+ * no 5D, negative time, or reverse branch needed.
+ *
+ * 2D map: X = η = |W|/D,  Y = β = V/c. The boundary curve  β² + η² = 1
+ * separates SUBC_TOO_SLOW (β²+η²<1) from SUBC_BEATS_LIGHT (β²+η²>1, β<1, η<1).
+ * η=1 is the Kidi Boundary; η>1 is NO_REAL_CORRIDOR. The live (η, β) is plotted.
+ *
+ * Insight: W ↑ ⇒ required V ↓, and V ↑ ⇒ required W ↓.
+ * Local V stays below c — earlier arrival is geometric corridor shortening, not FTL.
+ */
+
+
+
+
+interface Props {
+  diag: Diagnostics;
+  width: number;
+  height: number;
+  pulse: number;
+}
+
+const VW_FIELD_COLOR: Record<VWCorrelationClass, string> = {
+  SUBC_BEATS_LIGHT: '#ffd23b',
+  EQUAL_TO_LIGHT_BASELINE: '#3fd0ff',
+  SUBC_TOO_SLOW: '#6f9bdc',
+  KIDI_BOUNDARY: '#ff9d3b',
+  NO_REAL_CORRIDOR: '#e23bd0',
+  LIGHT_SPEED_LIMIT: '#ffb13b',
+  INVALID_INPUT: '#ff6b6b',
+};
+
+const VW_FIELD_LABEL: Record<VWCorrelationClass, string> = {
+  SUBC_BEATS_LIGHT: 'SUB-C BEATS LIGHT — V<c yet beats light',
+  EQUAL_TO_LIGHT_BASELINE: 'EQUAL TO LIGHT BASELINE',
+  SUBC_TOO_SLOW: 'TOO SLOW — increase W or V',
+  KIDI_BOUNDARY: 'KIDI BOUNDARY — D_eff→0',
+  NO_REAL_CORRIDOR: 'NO REAL CORRIDOR — |W|>|dx|',
+  LIGHT_SPEED_LIMIT: 'LIGHT-SPEED LIMIT (V≥c)',
+  INVALID_INPUT: 'INVALID INPUT',
+};
+
+function VWCorrelationFieldPanel({ diag, width, height, pulse }: Props) {
+  const ref = useRef<HTMLCanvasElement>(null);
+
+  useEffect(() => {
+    const canvas = ref.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    const dpr = window.devicePixelRatio || 1;
+    canvas.width = width * dpr;
+    canvas.height = height * dpr;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+    const vf = diag.vwCorrelation;
+    const eta = Number.isFinite(vf.eta) ? vf.eta : 0;
+    const beta = Number.isFinite(vf.beta) ? vf.beta : 0;
+    const etaMax = Math.max(1.1, eta + 0.2);
+
+    const padL = 48, padT = 26, padB = 42, padR = 18;
+    const plotW = width - padL - padR;
+    const plotH = height - padT - padB;
+    const X = (e: number) => padL + (e / etaMax) * plotW;
+    const Y = (b: number) => padT + plotH - Math.max(0, Math.min(1.05, b)) * (plotH / 1.05);
+
+    ctx.fillStyle = '#0a0e16';
+    ctx.fillRect(0, 0, width, height);
+
+    // region fill by coarse sampling of β² + η²
+    const cells = 56;
+    const cw = plotW / cells;
+    const ch = plotH / cells;
+    for (let i = 0; i < cells; i++) {
+      for (let k = 0; k < cells; k++) {
+        const e = ((i + 0.5) / cells) * etaMax;
+        const b = (1 - (k + 0.5) / cells) * 1.05; // β up to ~1.05 (top)
+        let color: string | null = null;
+        if (e > 1) color = 'rgba(226,59,208,0.13)'; // no real corridor
+        else if (b > 1) color = 'rgba(255,177,59,0.10)'; // V≥c light-speed limit band
+        else {
+          const score = b * b + e * e;
+          if (Math.abs(score - 1) < 0.03) color = null; // leave boundary clear
+          else if (score > 1) color = 'rgba(255,210,80,0.13)'; // beats light
+          else color = 'rgba(90,130,210,0.10)'; // too slow
+        }
+        if (color) {
+          ctx.fillStyle = color;
+          ctx.fillRect(padL + i * cw, padT + k * ch, cw + 1, ch + 1);
+        }
+      }
+    }
+
+    // axes
+    ctx.strokeStyle = 'rgba(120,140,170,0.4)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(X(0), Y(0)); ctx.lineTo(X(etaMax), Y(0));
+    ctx.moveTo(X(0), Y(0)); ctx.lineTo(X(0), Y(1.05));
+    ctx.stroke();
+
+    // β = 1 ceiling (sub-c limit)
+    ctx.strokeStyle = 'rgba(63,208,255,0.6)';
+    ctx.setLineDash([5, 4]);
+    ctx.beginPath(); ctx.moveTo(X(0), Y(1)); ctx.lineTo(X(etaMax), Y(1)); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle = 'rgba(120,200,240,0.75)';
+    ctx.font = '9px ui-monospace, monospace';
+    ctx.fillText('β=1 (V=c)', X(etaMax) - 58, Y(1) - 3);
+
+    // boundary curve β² + η² = 1
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    let started = false;
+    for (let s = 0; s <= 100; s++) {
+      const e = (s / 100) * Math.min(1, etaMax);
+      const b = Math.sqrt(Math.max(0, 1 - e * e));
+      const x = X(e), y = Y(b);
+      if (!started) { ctx.moveTo(x, y); started = true; } else ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+    ctx.fillStyle = '#dfe7f5';
+    ctx.font = '10px ui-monospace, monospace';
+    ctx.fillText('β² + η² = 1', X(0.16), Y(Math.sqrt(Math.max(0, 1 - 0.16 * 0.16))) - 6);
+
+    // η = 1 Kidi boundary line
+    if (etaMax >= 1) {
+      ctx.strokeStyle = 'rgba(255,157,59,0.85)';
+      ctx.lineWidth = 1.6;
+      ctx.beginPath(); ctx.moveTo(X(1), Y(0)); ctx.lineTo(X(1), Y(1.05)); ctx.stroke();
+      ctx.fillStyle = '#ff9d3b';
+      ctx.fillText('η=1 Kidi', X(1) + 3, Y(0.92));
+    }
+
+    // region labels
+    ctx.font = '10px ui-monospace, monospace';
+    ctx.fillStyle = 'rgba(255,210,80,0.9)';
+    ctx.fillText('SUB-C BEATS LIGHT', X(0.12), Y(0.9));
+    ctx.fillStyle = 'rgba(140,170,230,0.9)';
+    ctx.fillText('too slow', X(0.1), Y(0.18));
+
+    // current point (η, β)
+    const color = VW_FIELD_COLOR[vf.className];
+    if (vf.className !== 'INVALID_INPUT') {
+      const px = X(Math.min(eta, etaMax));
+      const py = Y(beta);
+      ctx.strokeStyle = 'rgba(255,255,255,0.35)';
+      ctx.setLineDash([2, 3]);
+      ctx.beginPath(); ctx.moveTo(X(0), py); ctx.lineTo(px, py); ctx.moveTo(px, Y(0)); ctx.lineTo(px, py); ctx.stroke();
+      ctx.setLineDash([]);
+      const r = vf.className === 'KIDI_BOUNDARY' ? 5 + 3 * (0.5 + 0.5 * Math.sin(pulse * 6)) : 5;
+      ctx.fillStyle = color;
+      ctx.beginPath(); ctx.arc(px, py, r, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.2; ctx.stroke();
+      ctx.fillStyle = '#e6eefc';
+      ctx.fillText(`η=${eta.toFixed(2)}, β=${beta.toFixed(2)}`, px + 8, py - 8);
+    }
+
+    // title + axis labels + field score + status
+    ctx.fillStyle = 'rgba(180,200,230,0.85)';
+    ctx.font = '12px ui-monospace, monospace';
+    ctx.fillText('Kidi V–W Correlation Field', padL, 16);
+    ctx.font = '10px ui-monospace, monospace';
+    ctx.fillStyle = 'rgba(170,120,255,0.9)';
+    ctx.fillText('η = |W|/D', X(etaMax) - 58, Y(0) + 16);
+    ctx.save();
+    ctx.translate(padL - 34, padT + plotH * 0.5);
+    ctx.rotate(-Math.PI / 2);
+    ctx.fillStyle = 'rgba(86,227,159,0.95)';
+    ctx.fillText('β = V/c', 0, 0);
+    ctx.restore();
+
+    const score = Number.isFinite(vf.fieldScore) ? vf.fieldScore.toFixed(3) : '—';
+    const marg = Number.isFinite(vf.margin) ? (vf.margin >= 0 ? `+${vf.margin.toFixed(3)}` : vf.margin.toFixed(3)) : '—';
+    ctx.fillStyle = color;
+    ctx.font = 'bold 10.5px ui-monospace, monospace';
+    ctx.fillText(`β²+η²=${score} (margin ${marg}) · ${VW_FIELD_LABEL[vf.className]}`, padL, height - 8);
+  }, [diag, width, height, pulse]);
+
+  return <canvas ref={ref} style={{ width, height, borderRadius: 8 }} />;
+}
+
+
+// ===================== src/components/Volume3DView.tsx =====================
+/**
+ * Volume3DView — the (x, t, α) volume rendered with plain Three.js.
+ *
+ * Layers (independently toggleable): axes box, grids, worldlines, signal path,
+ * send/receive markers, singular loci planes α=±x, null surfaces from the send
+ * event, slice shadows. Custom orbit/pan/zoom is derived from camera.ts (no
+ * OrbitControls dependency). Hover/click raycasts markers for cross-panel
+ * linking. Falls back to a readable message if WebGL is unavailable.
+ *
+ * THREE is imported for the Vite build and resolves to the vendored UMD global
+ * in the offline standalone (the import line is stripped at build time).
+ */
+
+
+
+
+
+
+
+interface LayerVisibility {
+  axes: boolean;
+  grids: boolean;
+  loci: boolean;
+  nullSurfaces: boolean;
+  worldlines: boolean;
+  signal: boolean;
+  shadows: boolean;
+  history: boolean;
+}
+
+interface Volume3DViewProps {
+  diag: Diagnostics;
+  events: SimEvent[];
+  progress: number;
+  width: number;
+  height: number;
+  cameraPreset: CameraPreset;
+  layerVisibility: LayerVisibility;
+  selectedEventId: string | null;
+  onSelectEvent?: (eventId: string | null) => void;
+  onHoverText?: (text: string | null) => void;
+  /** show the ordinary α=0 light-speed reference baseline (default true) */
+  showLightBaseline?: boolean;
+}
+
+const hex = (c: string) => new THREE.Color(c);
+
+function Volume3DView(props: Volume3DViewProps) {
+  const mountRef = useRef<HTMLDivElement>(null);
+  const [webglError, setWebglError] = useState<string | null>(null);
+
+  // persistent three objects / ephemeral state across renders
+  const three = useRef<any>({});
+  const cam = useRef<SphericalCamera>({ target: [2.5, 3, 0], radius: 26, azimuth: Math.PI * 0.28, elevation: Math.PI * 0.16 });
+  const progressRef = useRef(props.progress);
+  const diagRef = useRef(props.diag);
+  const pulseRef = useRef(0);
+
+  // ---- mount: renderer + scene + camera + input + animation loop ----------
+  useEffect(() => {
+    const mount = mountRef.current;
+    if (!mount) return;
+
+    let renderer: any;
+    try {
+      renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    } catch (e: any) {
+      setWebglError(e?.message || 'WebGL is not available in this browser.');
+      return;
+    }
+    if (!renderer || !renderer.getContext || !renderer.getContext()) {
+      setWebglError('Could not acquire a WebGL context.');
+      return;
+    }
+
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    renderer.setPixelRatio(dpr);
+    renderer.setSize(props.width, props.height);
+    renderer.setClearColor(0x070a11, 1);
+    mount.appendChild(renderer.domElement);
+    renderer.domElement.style.borderRadius = '10px';
+    renderer.domElement.style.touchAction = 'none';
+
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(50, props.width / props.height, 0.1, 1000);
+    scene.add(new THREE.AmbientLight(0xffffff, 0.75));
+    const dir = new THREE.DirectionalLight(0xffffff, 0.6);
+    dir.position.set(8, 14, 10);
+    scene.add(dir);
+
+    // layer groups
+    const groups: Record<string, any> = {};
+    for (const k of ['axes', 'grids', 'worldlines', 'signal', 'markers', 'loci', 'nullSurfaces', 'shadows', 'history', 'highlight']) {
+      groups[k] = new THREE.Group();
+      scene.add(groups[k]);
+    }
+
+    three.current = { renderer, scene, camera, groups, raycaster: new THREE.Raycaster(), pointer: new THREE.Vector2() };
+    buildScene();
+    applyLayers();
+
+    // ---- custom orbit / pan / zoom ----
+    let dragging: 'orbit' | 'pan' | null = null;
+    let lastX = 0, lastY = 0;
+    const el = renderer.domElement;
+
+    const onDown = (e: PointerEvent) => {
+      dragging = e.button === 2 || e.shiftKey ? 'pan' : 'orbit';
+      lastX = e.clientX; lastY = e.clientY;
+      el.setPointerCapture(e.pointerId);
+      e.preventDefault();
+    };
+    const onMove = (e: PointerEvent) => {
+      if (!dragging) { raycastHover(e); return; }
+      const dx = e.clientX - lastX, dy = e.clientY - lastY;
+      lastX = e.clientX; lastY = e.clientY;
+      const c = cam.current;
+      if (dragging === 'orbit') {
+        c.azimuth -= dx * 0.01;
+        c.elevation = clampElevation(c.elevation + dy * 0.01);
+      } else {
+        // pan target in the camera's screen plane
+        const panScale = c.radius * 0.0016;
+        const right: Vec3 = [Math.cos(c.azimuth - Math.PI / 2), 0, Math.sin(c.azimuth - Math.PI / 2)];
+        c.target = [
+          c.target[0] - right[0] * dx * panScale,
+          c.target[1] + dy * panScale,
+          c.target[2] - right[2] * dx * panScale,
+        ];
+      }
+    };
+    const onUp = (e: PointerEvent) => { dragging = null; try { el.releasePointerCapture(e.pointerId); } catch {} };
+    const onWheel = (e: WheelEvent) => {
+      e.preventDefault();
+      cam.current.radius = Math.max(4, Math.min(120, cam.current.radius * (1 + Math.sign(e.deltaY) * 0.08)));
+    };
+    const onContext = (e: Event) => e.preventDefault();
+    const onClick = (e: PointerEvent) => raycastClick(e);
+
+    el.addEventListener('pointerdown', onDown);
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', onUp);
+    el.addEventListener('wheel', onWheel, { passive: false });
+    el.addEventListener('contextmenu', onContext);
+    el.addEventListener('click', onClick);
+
+    // ---- animation loop ----
+    let raf = 0;
+    let last = performance.now();
+    const loop = (now: number) => {
+      const dt = (now - last) / 1000; last = now;
+      pulseRef.current += dt;
+      updateDynamic();
+      const pos = cameraPosition(cam.current);
+      camera.position.set(pos[0], pos[1], pos[2]);
+      camera.lookAt(cam.current.target[0], cam.current.target[1], cam.current.target[2]);
+      renderer.render(scene, camera);
+      raf = requestAnimationFrame(loop);
+    };
+    raf = requestAnimationFrame(loop);
+
+    return () => {
+      cancelAnimationFrame(raf);
+      el.removeEventListener('pointerdown', onDown);
+      window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointerup', onUp);
+      el.removeEventListener('wheel', onWheel);
+      el.removeEventListener('contextmenu', onContext);
+      el.removeEventListener('click', onClick);
+      renderer.dispose();
+      if (renderer.domElement.parentNode === mount) mount.removeChild(renderer.domElement);
+      three.current = {};
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // keep refs fresh for the animation loop
+  useEffect(() => { progressRef.current = props.progress; }, [props.progress]);
+
+  // rebuild geometry when the diagnostics (or baseline toggle) change
+  useEffect(() => {
+    diagRef.current = props.diag;
+    if (three.current.scene) { buildScene(); applyLayers(); recenterTarget(); }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [props.diag, props.showLightBaseline]);
+
+  // resize
+  useEffect(() => {
+    const t = three.current;
+    if (!t.renderer) return;
+    t.renderer.setSize(props.width, props.height);
+    t.camera.aspect = props.width / props.height;
+    t.camera.updateProjectionMatrix();
+  }, [props.width, props.height]);
+
+  // camera preset
+  useEffect(() => {
+    const t = three.current;
+    if (!t.scene) return;
+    cam.current = presetCamera(props.cameraPreset, cam.current.target, cam.current.radius);
+    if (props.cameraPreset === 'follow') recenterTarget();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [props.cameraPreset]);
+
+  // layers
+  useEffect(() => { applyLayers(); /* eslint-disable-next-line */ }, [props.layerVisibility]);
+
+  // selection highlight
+  useEffect(() => { applyHighlight(); /* eslint-disable-next-line */ }, [props.selectedEventId, props.events]);
+
+  // ---- scene builders ------------------------------------------------------
+
+  function clearGroup(g: any) {
+    while (g.children.length) {
+      const c = g.children.pop();
+      c.geometry?.dispose?.();
+      c.material?.dispose?.();
+    }
+  }
+
+  function lineMesh(points: Vec3[], color: string, width: number, dashed = false): any {
+    const geo = new THREE.BufferGeometry().setFromPoints(points.map((p) => new THREE.Vector3(p[0], p[1], p[2])));
+    const mat = dashed
+      ? new THREE.LineDashedMaterial({ color: hex(color), dashSize: 0.5, gapSize: 0.3, linewidth: width })
+      : new THREE.LineBasicMaterial({ color: hex(color), linewidth: width });
+    const line = new THREE.Line(geo, mat);
+    if (dashed) line.computeLineDistances();
+    return line;
+  }
+
+  function quadMesh(positions: number[], indices: number[], color: string, opacity: number): any {
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+    geo.setIndex(indices);
+    geo.computeVertexNormals();
+    const mat = new THREE.MeshBasicMaterial({ color: hex(color), transparent: true, opacity, side: THREE.DoubleSide, depthWrite: false });
+    return new THREE.Mesh(geo, mat);
+  }
+
+  function buildScene() {
+    const t = three.current;
+    if (!t.scene) return;
+    const diag = diagRef.current;
+    const G = buildSceneGeometry(diag);
+    const b = G.bounds;
+
+    // axes box
+    clearGroup(t.groups.axes);
+    const box = new THREE.Box3(new THREE.Vector3(b.xMin, b.tMin, b.alphaMin), new THREE.Vector3(b.xMax, b.tMax, b.alphaMax));
+    const boxHelper = new THREE.Box3Helper(box, hex('#2a3a5a'));
+    t.groups.axes.add(boxHelper);
+    // axis lines: x cyan, t white, alpha violet
+    t.groups.axes.add(lineMesh([[b.xMin, b.tMin, 0], [b.xMax, b.tMin, 0]], '#3fd0ff', 2));
+    t.groups.axes.add(lineMesh([[b.xMin, b.tMin, 0], [b.xMin, b.tMax, 0]], '#cfe0ff', 2));
+    t.groups.axes.add(lineMesh([[b.xMin, b.tMin, b.alphaMin], [b.xMin, b.tMin, b.alphaMax]], '#aa78ff', 2));
+
+    // grids on the three walls
+    clearGroup(t.groups.grids);
+    const gx = new THREE.GridHelper(Math.max(b.xMax - b.xMin, b.tMax - b.tMin), 12, 0x223049, 0x162032);
+    gx.position.set((b.xMin + b.xMax) / 2, b.tMin, 0);
+    t.groups.grids.add(gx);
+
+    // worldlines
+    clearGroup(t.groups.worldlines);
+    t.groups.worldlines.add(lineMesh(G.worldlines[0].points, '#3fd0ff', 3)); // Bob
+    t.groups.worldlines.add(lineMesh(G.worldlines[1].points, '#ff61dc', 3)); // Alice
+
+    // loci planes α = ±x
+    clearGroup(t.groups.loci);
+    for (const m of G.loci) t.groups.loci.add(quadMesh(m.positions, m.indices, '#ff4646', 0.16));
+
+    // null surfaces
+    clearGroup(t.groups.nullSurfaces);
+    for (const m of G.nullSurface) {
+      const mesh = quadMesh(m.positions, m.indices, '#4aa3ff', 0.10);
+      const wire = new THREE.LineSegments(
+        new THREE.WireframeGeometry(mesh.geometry),
+        new THREE.LineBasicMaterial({ color: hex('#4aa3ff'), transparent: true, opacity: 0.25 }),
+      );
+      t.groups.nullSurfaces.add(mesh);
+      t.groups.nullSurfaces.add(wire);
+    }
+
+    // signal path (appearance from typed arrival)
+    clearGroup(t.groups.signal);
+    const app = appearanceForValue(diag.arrival, diag.phase.branch);
+    t.groups.signal.add(lineMesh(G.signal.points, app.color, app.thickness, app.dashed));
+
+    // Light-Speed Reference Baseline: ordinary α=0 ray (a fixed comparison ruler)
+    const lb = diag.lightBaseline;
+    const lbN = lb.tLightArrival.kind === 'Real' ? lb.tLightArrival.value : null;
+    if (props.showLightBaseline !== false && lbN !== null) {
+      const baseLine = lineMesh(
+        [[diag.scenario.xBob, diag.scenario.tSend, 0], [diag.scenario.xAlice, lbN, 0]],
+        '#3fd0ff', 2, true,
+      );
+      baseLine.userData = { baseline: true };
+      t.groups.signal.add(baseLine);
+    }
+
+    // markers
+    clearGroup(t.groups.markers);
+    for (const mk of G.markers) {
+      const isSend = mk.id === 'send';
+      const color = isSend ? '#3fd0ff' : appearanceForValue(diag.arrival, diag.phase.branch).color;
+      const sph = new THREE.Mesh(
+        new THREE.SphereGeometry(0.22, 16, 16),
+        new THREE.MeshBasicMaterial({ color: hex(color) }),
+      );
+      sph.position.set(mk.position[0], mk.position[1], mk.position[2]);
+      sph.userData = { marker: mk.id, eventType: isSend ? 'SEND' : diag.contradiction ? 'FEEDBACK_CONTRADICTION' : diag.reverse ? 'REVERSE_ARRIVAL' : 'RECEIVE', label: mk.label, pos: mk.position };
+      t.groups.markers.add(sph);
+    }
+
+    // slice shadows: project signal onto x-t wall (α=alphaMin) and x-α wall (t=tMin)
+    clearGroup(t.groups.shadows);
+    const s = G.signal.points;
+    const shadowMat = (c: string) => new THREE.LineDashedMaterial({ color: hex(c), opacity: 0.4, transparent: true, dashSize: 0.4, gapSize: 0.25 });
+    const xtShadow = new THREE.Line(
+      new THREE.BufferGeometry().setFromPoints(s.map((p) => new THREE.Vector3(p[0], p[1], b.alphaMin))),
+      shadowMat('#56e39f'),
+    );
+    xtShadow.computeLineDistances();
+    const xaShadow = new THREE.Line(
+      new THREE.BufferGeometry().setFromPoints(s.map((p) => new THREE.Vector3(p[0], b.tMin, p[2]))),
+      shadowMat('#e23bd0'),
+    );
+    xaShadow.computeLineDistances();
+    t.groups.shadows.add(xtShadow);
+    t.groups.shadows.add(xaShadow);
+
+    // history trails (faint prior arrivals from the event log)
+    clearGroup(t.groups.history);
+    for (const ev of props.events) {
+      const arr = ev.payload?.arrival as Vec3 | undefined;
+      const snd = ev.payload?.send as Vec3 | undefined;
+      if (arr && snd && arr.every(Number.isFinite)) {
+        const trail = lineMesh([snd, arr], '#5b6b86', 1);
+        trail.material.transparent = true;
+        trail.material.opacity = 0.25;
+        t.groups.history.add(trail);
+      }
+    }
+
+    // highlight holder
+    clearGroup(t.groups.highlight);
+    const ring = new THREE.Mesh(
+      new THREE.TorusGeometry(0.5, 0.06, 10, 28),
+      new THREE.MeshBasicMaterial({ color: hex('#ffffff') }),
+    );
+    ring.visible = false;
+    ring.name = 'selRing';
+    t.groups.highlight.add(ring);
+
+    applyHighlight();
+  }
+
+  function updateDynamic() {
+    const t = three.current;
+    if (!t.scene) return;
+    const diag = diagRef.current;
+    const G = buildSceneGeometry(diag);
+    const p = Math.max(0, Math.min(1, progressRef.current));
+    const send = G.signal.points[0];
+    const end = G.signal.points[1];
+    // moving marker
+    if (!t.movingMarker) {
+      t.movingMarker = new THREE.Mesh(new THREE.SphereGeometry(0.16, 12, 12), new THREE.MeshBasicMaterial({ color: 0xffffff }));
+      t.groups.signal.add(t.movingMarker);
+    }
+    t.movingMarker.position.set(
+      send[0] + p * (end[0] - send[0]),
+      send[1] + p * (end[1] - send[1]),
+      send[2] + p * (end[2] - send[2]),
+    );
+    // boundary pulse on the loci group when on a singular boundary
+    const onBoundary = diag.splitDomain === 'SINGULAR_BOUNDARY' || diag.signal.domain === 'SINGULAR_BOUNDARY';
+    const pulse = onBoundary ? 0.6 + 0.4 * Math.sin(pulseRef.current * 5) : 0.16;
+    t.groups.loci.children.forEach((m: any) => { if (m.material) m.material.opacity = onBoundary ? pulse * 0.4 : 0.16; });
+    // selection ring pulse
+    const ring = t.groups.highlight.children.find((c: any) => c.name === 'selRing');
+    if (ring && ring.visible) ring.rotation.z += 0.05;
+  }
+
+  function applyLayers() {
+    const t = three.current;
+    if (!t.groups) return;
+    const v = props.layerVisibility;
+    t.groups.axes.visible = v.axes;
+    t.groups.grids.visible = v.grids;
+    t.groups.worldlines.visible = v.worldlines;
+    t.groups.signal.visible = v.signal;
+    t.groups.markers.visible = v.signal;
+    t.groups.loci.visible = v.loci;
+    t.groups.nullSurfaces.visible = v.nullSurfaces;
+    t.groups.shadows.visible = v.shadows;
+    t.groups.history.visible = v.history;
+  }
+
+  function recenterTarget() {
+    const diag = diagRef.current;
+    const G = buildSceneGeometry(diag);
+    const send = G.signal.points[0];
+    const end = G.signal.points[1];
+    cam.current.target = [(send[0] + end[0]) / 2, (send[1] + end[1]) / 2, (send[2] + end[2]) / 2];
+  }
+
+  function eventPoint(ev: SimEvent): Vec3 | null {
+    const arr = ev.payload?.arrival as Vec3 | undefined;
+    const snd = ev.payload?.send as Vec3 | undefined;
+    if (ev.type === 'SEND' || ev.type === 'PHASE_CHANGE') return snd ?? null;
+    if (arr && arr.every(Number.isFinite)) return arr;
+    return snd ?? null;
+  }
+
+  function applyHighlight() {
+    const t = three.current;
+    if (!t.groups) return;
+    const ring = t.groups.highlight.children.find((c: any) => c.name === 'selRing');
+    if (!ring) return;
+    const ev = props.events.find((e) => e.id === props.selectedEventId);
+    const pt = ev ? eventPoint(ev) : null;
+    if (pt) {
+      ring.position.set(pt[0], pt[1], pt[2]);
+      ring.visible = true;
+    } else {
+      ring.visible = false;
+    }
+  }
+
+  // ---- raycasting ----------------------------------------------------------
+
+  function setPointer(e: PointerEvent) {
+    const t = three.current;
+    const rect = t.renderer.domElement.getBoundingClientRect();
+    t.pointer.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+    t.pointer.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+  }
+
+  function pickMarker(e: PointerEvent): any | null {
+    const t = three.current;
+    if (!t.camera) return null;
+    setPointer(e);
+    t.raycaster.setFromCamera(t.pointer, t.camera);
+    const hits = t.raycaster.intersectObjects(t.groups.markers.children, false);
+    return hits.length ? hits[0].object : null;
+  }
+
+  function raycastHover(e: PointerEvent) {
+    const obj = pickMarker(e);
+    if (!props.onHoverText) return;
+    if (obj) {
+      const pos = obj.userData.pos as Vec3;
+      const app = appearanceForValue(diagRef.current.arrival, diagRef.current.phase.branch);
+      props.onHoverText(`${obj.userData.label} @ (x=${pos[0].toFixed(2)}, t=${pos[1].toFixed(2)}, α=${pos[2].toFixed(2)}) — ${app.label}`);
+    } else {
+      props.onHoverText(null);
+    }
+  }
+
+  function raycastClick(e: PointerEvent) {
+    const obj = pickMarker(e);
+    if (!obj || !props.onSelectEvent) return;
+    const wantType = obj.userData.eventType as string;
+    const ev = props.events.find((x) => x.type === wantType) ?? props.events.find((x) => x.payload && (x.payload as any).send);
+    props.onSelectEvent(ev ? ev.id : null);
+  }
+
+  // ---- render --------------------------------------------------------------
+
+  const domain = props.diag.splitDomain;
+  return (
+    <div className="volume3d">
+      <div className="panel-head">
+        <h3>3D Volume (x, t, α)</h3>
+        <span className="domain-pill" style={{ color: DOMAIN_COLORS[domain] }}>{domain}</span>
+      </div>
+      {webglError ? (
+        <div className="webgl-fallback" role="alert">
+          3D view unavailable: {webglError}
+          <div className="webgl-fallback-sub">The 2D spacetime and alpha-plane slices remain fully usable.</div>
+        </div>
+      ) : (
+        <div
+          ref={mountRef}
+          className="volume3d-canvas"
+          style={{ width: props.width, height: props.height }}
+          role="img"
+          aria-label={`3D volume of x, t and alpha. Current split-complex domain ${domain}. Drag to orbit, wheel to zoom.`}
+        />
+      )}
+      <div className="volume3d-hint">drag = orbit · shift/right-drag = pan · wheel = zoom · click marker = select event</div>
+    </div>
+  );
+}
+
+
+// ===================== src/components/LayerToggleGroup.tsx =====================
+/**
+ * LayerToggleGroup — focusable checkboxes to show/hide each 3D layer.
+ */
+
+
+interface Props {
+  visibility: LayerVisibility;
+  onToggle: (key: keyof LayerVisibility) => void;
+}
+
+const LABELS: { key: keyof LayerVisibility; label: string }[] = [
+  { key: 'axes', label: 'Axes box' },
+  { key: 'grids', label: 'Grid planes' },
+  { key: 'worldlines', label: 'Worldlines' },
+  { key: 'signal', label: 'Signal + markers' },
+  { key: 'loci', label: 'Singular planes α=±x' },
+  { key: 'nullSurfaces', label: 'Null surfaces' },
+  { key: 'shadows', label: 'Slice shadows' },
+  { key: 'history', label: 'History trails' },
+];
+
+function LayerToggleGroup({ visibility, onToggle }: Props) {
+  return (
+    <fieldset className="layer-toggles">
+      <legend>3D layers</legend>
+      <div className="layer-grid">
+        {LABELS.map((l) => (
+          <label key={l.key} className="layer-check">
+            <input
+              type="checkbox"
+              checked={visibility[l.key]}
+              onChange={() => onToggle(l.key)}
+            />
+            {l.label}
+          </label>
+        ))}
+      </div>
+    </fieldset>
+  );
+}
+
+
+// ===================== src/components/ControlPanel.tsx =====================
+/**
+ * ControlPanel — scenario inputs, phase presets, α / branch / close-loop
+ * controls, transport, 3D camera presets, 3D layer toggles, and the self-test
+ * runner. Every slider has a numeric textbox twin for keyboard/AT users.
+ */
+
+
+
+
+
+
+
+interface Props {
+  scenario: Scenario;
+  setScenario: (s: Scenario) => void;
+  alpha: number;
+  setAlpha: (a: number) => void;
+  branch: Branch;
+  setBranch: (b: Branch) => void;
+  closeLoop: boolean;
+  setCloseLoop: (b: boolean) => void;
+  phases: Phase[];
+  activePhaseId: string | null;
+  onSelectPhase: (p: Phase) => void;
+  playing: boolean;
+  onPlay: () => void;
+  onPause: () => void;
+  onReset: () => void;
+  speed: number;
+  setSpeed: (s: number) => void;
+  onRunTests: () => void;
+  testResults: TestResult[] | null;
+  cameraPreset: CameraPreset;
+  setCameraPreset: (p: CameraPreset) => void;
+  layerVisibility: LayerVisibility;
+  onToggleLayer: (k: keyof LayerVisibility) => void;
+  wLabel: boolean;
+  setWLabel: (b: boolean) => void;
+  showLightBaseline: boolean;
+  setShowLightBaseline: (b: boolean) => void;
+  showSubCPath: boolean;
+  setShowSubCPath: (b: boolean) => void;
+  onHelp: () => void;
+}
+
+const PRESET_LABEL: Record<CameraPreset, string> = {
+  iso: 'Isometric',
+  front: 'Front (x,t)',
+  top: 'Top (x,α)',
+  side: 'Side (t,α)',
+  follow: 'Follow signal',
+};
+
+function ControlPanel(p: Props) {
+  const numField = (v: number, set: (n: number) => void, step = 1, label = '') => (
+    <input
+      type="number"
+      value={Number.isFinite(v) ? v : 0}
+      step={step}
+      aria-label={label}
+      onChange={(e) => set(parseFloat(e.target.value))}
+    />
+  );
+
+  const passed = p.testResults ? p.testResults.filter((t) => t.pass).length : 0;
+  const total = p.testResults ? p.testResults.length : 0;
+
+  return (
+    <div className="panel controls">
+      <div className="panel-head">
+        <h3>Controls</h3>
+        <button className="help-btn" onClick={p.onHelp} aria-label="Keyboard help" title="Help (?)">?</button>
+      </div>
+
+      <div className="ctl-block">
+        <div className="ctl-title">Demo phases (escalation 0 → ½ → 1 → ⊥)</div>
+        <div className="phase-buttons">
+          {p.phases.map((ph, i) => (
+            <button
+              key={ph.id}
+              className={p.activePhaseId === ph.id ? 'phase active' : 'phase'}
+              onClick={() => p.onSelectPhase(ph)}
+              title={`${ph.blurb} (key ${i + 1})`}
+            >
+              <span className="phase-key">{i + 1}</span> {ph.name}
+            </button>
+          ))}
+        </div>
+        {p.activePhaseId && (
+          <div className="phase-blurb">{p.phases.find((x) => x.id === p.activePhaseId)?.blurb}</div>
+        )}
+      </div>
+
+      <div className="ctl-block">
+        <div className="ctl-title">{p.wLabel ? 'W / α phase' : 'Alpha phase α'}</div>
+        <label className="checkbox wlabel-toggle">
+          <input type="checkbox" checked={p.wLabel} onChange={(e) => p.setWLabel(e.target.checked)} />
+          label α as W / α
+        </label>
+        <div className="slider-twin">
+          <input
+            type="range" min={0} max={8} step={0.01} value={p.alpha}
+            aria-label="alpha phase"
+            onChange={(e) => p.setAlpha(parseFloat(e.target.value))}
+          />
+          {numField(p.alpha, p.setAlpha, 0.01, 'alpha phase value')}
+        </div>
+        <div className="ctl-row">
+          <label>
+            branch
+            <select value={p.branch} onChange={(e) => p.setBranch(e.target.value as Branch)}>
+              <option value="+">+ (forward)</option>
+              <option value="-">− (reverse)</option>
+              <option value="plain">plain</option>
+            </select>
+          </label>
+          <label className="checkbox">
+            <input type="checkbox" checked={p.closeLoop} onChange={(e) => p.setCloseLoop(e.target.checked)} />
+            close causal loop → ⊥
+          </label>
+        </div>
+      </div>
+
+      <div className="ctl-block">
+        <div className="ctl-title">Sub-c corridor speed  v = {(p.scenario.betaSub ?? 0.8).toFixed(2)}c</div>
+        <div className="slider-twin">
+          <input
+            type="range" min={0.05} max={0.99} step={0.01}
+            value={p.scenario.betaSub ?? 0.8}
+            aria-label="sub-c corridor speed beta"
+            onChange={(e) => p.setScenario({ ...p.scenario, betaSub: parseFloat(e.target.value) })}
+          />
+          {numField(p.scenario.betaSub ?? 0.8, (n) => p.setScenario({ ...p.scenario, betaSub: n }), 0.01, 'sub-c corridor speed value')}
+        </div>
+        <div className="preset-buttons">
+          {[0.9, 0.8, 0.5, 0.2].map((b) => (
+            <button
+              key={b}
+              className={Math.abs((p.scenario.betaSub ?? 0.8) - b) < 1e-9 ? 'preset active' : 'preset'}
+              onClick={() => p.setScenario({ ...p.scenario, betaSub: b })}
+            >
+              {b}c
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="ctl-block">
+        <div className="ctl-title">Scenario</div>
+        <div className="ctl-grid">
+          <label>Bob x{numField(p.scenario.xBob, (n) => p.setScenario({ ...p.scenario, xBob: n }), 1, 'Bob x')}</label>
+          <label>Alice x{numField(p.scenario.xAlice, (n) => p.setScenario({ ...p.scenario, xAlice: n }), 1, 'Alice x')}</label>
+          <label>send t{numField(p.scenario.tSend, (n) => p.setScenario({ ...p.scenario, tSend: n }), 1, 'send time')}</label>
+          <label>c{numField(p.scenario.c, (n) => p.setScenario({ ...p.scenario, c: n }), 0.1, 'speed of light')}</label>
+        </div>
+      </div>
+
+      <div className="ctl-block">
+        <div className="ctl-title">Timeline</div>
+        <div className="transport">
+          {p.playing ? <button onClick={p.onPause}>⏸ Pause</button> : <button onClick={p.onPlay}>▶ Play</button>}
+          <button onClick={p.onReset}>⟲ Reset</button>
+        </div>
+        <div className="slider-twin">
+          <label className="twin-label">speed</label>
+          <input
+            type="range" min={0.2} max={3} step={0.1} value={p.speed}
+            aria-label="animation speed"
+            onChange={(e) => p.setSpeed(parseFloat(e.target.value))}
+          />
+          {numField(p.speed, p.setSpeed, 0.1, 'animation speed value')}
+        </div>
+      </div>
+
+      <div className="ctl-block">
+        <div className="ctl-title">Display</div>
+        <label className="checkbox">
+          <input type="checkbox" checked={p.showLightBaseline} onChange={(e) => p.setShowLightBaseline(e.target.checked)} />
+          Show light-speed baseline (α=0, β=1)
+        </label>
+        <label className="checkbox">
+          <input type="checkbox" checked={p.showSubCPath} onChange={(e) => p.setShowSubCPath(e.target.checked)} />
+          Show sub-c corridor path (gold)
+        </label>
+      </div>
+
+      <div className="ctl-block">
+        <div className="ctl-title">3D camera</div>
+        <div className="preset-buttons">
+          {ALL_PRESETS.map((preset) => (
+            <button
+              key={preset}
+              className={p.cameraPreset === preset ? 'preset active' : 'preset'}
+              onClick={() => p.setCameraPreset(preset)}
+            >
+              {PRESET_LABEL[preset]}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="ctl-block">
+        <LayerToggleGroup visibility={p.layerVisibility} onToggle={p.onToggleLayer} />
+      </div>
+
+      <div className="ctl-block">
+        <div className="ctl-title">Verification</div>
+        <button className="test-btn" onClick={p.onRunTests}>Run self-tests</button>
+        {p.testResults && (
+          <div className="test-results">
+            <div className={passed === total ? 'test-summary ok' : 'test-summary fail'}>{passed}/{total} passed</div>
+            {p.testResults.map((t, i) => (
+              <div key={i} className={t.pass ? 'test-row pass' : 'test-row fail'}>
+                <span>{t.pass ? '✓' : '✗'}</span> {t.name}
+                {t.detail && <span className="test-detail"> — {t.detail}</span>}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+
+// ===================== src/components/TimeParadoxLab.tsx =====================
+/**
+ * TimeParadoxLab — top-level component. Owns scenario + phase + animation +
+ * selection + camera + layer state, drives the timeline with requestAnimationFrame,
+ * and composes the six WO panels: control panel, 2D spacetime slice, 2D
+ * alpha-plane slice, 3D (x,t,α) volume, diagnostics, and event log.
+ */
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+const DURATION = 2.6; // seconds for a full traversal at speed 1
+const clampN = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
+
+const DEFAULT_LAYERS: LayerVisibility = {
+  axes: true,
+  grids: true,
+  loci: true,
+  nullSurfaces: true,
+  worldlines: true,
+  signal: true,
+  shadows: true,
+  history: false,
+};
+
+function eventWorldPoint(ev: SimEvent | null): Vec3 | null {
+  if (!ev || !ev.payload) return null;
+  const arr = ev.payload.arrival as Vec3 | undefined;
+  const snd = ev.payload.send as Vec3 | undefined;
+  if (ev.type === 'SEND' || ev.type === 'PHASE_CHANGE') return snd ?? null;
+  if (arr && arr.every(Number.isFinite)) return arr;
+  return snd ?? null;
+}
+
+function TimeParadoxLab() {
+  const [scenario, setScenario] = useState<Scenario>(DEFAULT_SCENARIO);
+  const [alpha, setAlphaRaw] = useState(0);
+  const [branch, setBranchRaw] = useState<Branch>('+');
+  const [closeLoop, setCloseLoopRaw] = useState(false);
+  const [activePhaseId, setActivePhaseId] = useState<string | null>('ordinary');
+
+  const [playing, setPlaying] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [clock, setClock] = useState(0);
+  const [speed, setSpeed] = useState(1);
+
+  const [events, setEvents] = useState<SimEvent[]>([]);
+  const [testResults, setTestResults] = useState<TestResult[] | null>(null);
+  const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
+  const [hoverText, setHoverText] = useState<string | null>(null);
+  const [cameraPreset, setCameraPreset] = useState<CameraPreset>('iso');
+  const [layers, setLayers] = useState<LayerVisibility>(DEFAULT_LAYERS);
+  const [helpOpen, setHelpOpen] = useState(false);
+  const [wLabel, setWLabel] = useState(true);
+  const [showLightBaseline, setShowLightBaseline] = useState(true);
+  const [showSubCPath, setShowSubCPath] = useState(true);
+  const seqRef = useRef(0);
+
+  const setAlpha = (a: number) => { setAlphaRaw(a); setActivePhaseId(null); };
+  const setBranch = (b: Branch) => { setBranchRaw(b); setActivePhaseId(null); };
+  const setCloseLoop = (b: boolean) => { setCloseLoopRaw(b); setActivePhaseId(null); };
+
+  const livePhase: Phase = useMemo(() => {
+    const named = activePhaseId ? DEMO_PHASES.find((d) => d.id === activePhaseId) : null;
+    return {
+      id: activePhaseId ?? 'custom',
+      name: named ? named.name : `Custom (α=${alpha.toFixed(2)}, ${branch})`,
+      alpha,
+      branch,
+      closeLoop,
+      expectedArrival: named ? named.expectedArrival : NaN,
+      blurb: named ? named.blurb : 'Custom phase from the sliders.',
+    };
+  }, [activePhaseId, alpha, branch, closeLoop]);
+
+  const diag = useMemo(() => evaluatePhase(scenario, livePhase), [scenario, livePhase]);
+
+  const selectedEvent = useMemo(
+    () => events.find((e) => e.id === selectedEventId) ?? null,
+    [events, selectedEventId],
+  );
+  const highlight = useMemo(() => eventWorldPoint(selectedEvent), [selectedEvent]);
+
+  const logPhase = (ph: Phase) => {
+    const d = evaluatePhase(scenario, ph);
+    const evs = buildEvents(d, seqRef.current);
+    seqRef.current += evs.length;
+    setEvents((prev) => [...prev, ...evs]);
+  };
+
+  const runLive = () => { setProgress(0); logPhase(livePhase); setPlaying(true); };
+
+  const onSelectPhase = (ph: Phase) => {
+    setActivePhaseId(ph.id);
+    setAlphaRaw(ph.alpha);
+    setBranchRaw(ph.branch);
+    setCloseLoopRaw(!!ph.closeLoop);
+    setProgress(0);
+    logPhase(ph);
+    setPlaying(true);
+  };
+
+  const onPlay = () => { if (progress >= 1 - 1e-6 || progress === 0) runLive(); else setPlaying(true); };
+  const onPause = () => setPlaying(false);
+  const onReset = () => { setPlaying(false); setProgress(0); setEvents([]); setSelectedEventId(null); seqRef.current = 0; };
+
+  const onExport = () => {
+    if (events.length === 0) return;
+    downloadEventLog(events);
+    const ev: SimEvent = {
+      id: `evt-${String(seqRef.current).padStart(4, '0')}`,
+      seq: seqRef.current,
+      type: 'EXPORT',
+      level: 'info',
+      phaseId: livePhase.id,
+      message: `Exported ${events.length} events as JSON`,
+      timestamp: Date.now() / 1000,
+      scenario: snapshotOf(scenario, livePhase),
+      typedState: Real(events.length),
+    };
+    seqRef.current += 1;
+    setEvents((prev) => [...prev, ev]);
+  };
+
+  const onToggleLayer = (k: keyof LayerVisibility) => setLayers((prev) => ({ ...prev, [k]: !prev[k] }));
+  const cycleCamera = () => setCameraPreset((prev) => ALL_PRESETS[(ALL_PRESETS.indexOf(prev) + 1) % ALL_PRESETS.length]);
+  const onRunTests = () => setTestResults(runSelfTests());
+
+  // keyboard shortcuts (kept fresh via a ref so the listener stays stable)
+  const actions = useRef<any>({});
+  actions.current = { onPlay, onPause, onReset, onExport, cycleCamera, onSelectPhase, onToggleLayer, setHelpOpen, playing };
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const tag = (e.target as HTMLElement)?.tagName;
+      if (tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA') return;
+      const a = actions.current;
+      if (e.key === ' ') { e.preventDefault(); a.playing ? a.onPause() : a.onPlay(); }
+      else if (e.key === 'r' || e.key === 'R') a.onReset();
+      else if (e.key === 'e' || e.key === 'E') a.onExport();
+      else if (e.key === 'c' || e.key === 'C') a.cycleCamera();
+      else if (e.key === 'l' || e.key === 'L') a.onToggleLayer('history');
+      else if (e.key === '?') a.setHelpOpen((v: boolean) => !v);
+      else if (e.key >= '1' && e.key <= '5') {
+        const idx = parseInt(e.key, 10) - 1;
+        if (DEMO_PHASES[idx]) a.onSelectPhase(DEMO_PHASES[idx]);
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
+
+  // animation loop
+  useEffect(() => {
+    const boundaryPulse = diag.splitDomain === 'SINGULAR_BOUNDARY';
+    if (!playing && !boundaryPulse) return;
+    let raf = 0;
+    let last = performance.now();
+    const loop = (now: number) => {
+      const dt = (now - last) / 1000;
+      last = now;
+      setClock((c) => c + dt);
+      if (playing) setProgress((pr) => Math.min(1, pr + (dt * speed) / DURATION));
+      raf = requestAnimationFrame(loop);
+    };
+    raf = requestAnimationFrame(loop);
+    return () => cancelAnimationFrame(raf);
+  }, [playing, speed, diag.splitDomain]);
+
+  useEffect(() => { if (playing && progress >= 1 - 1e-6) setPlaying(false); }, [progress, playing]);
+
+  // responsive sizes
+  const stCard = useElementSize<HTMLDivElement>();
+  const apCard = useElementSize<HTMLDivElement>();
+  const psCard = useElementSize<HTMLDivElement>();
+  const corrCard = useElementSize<HTMLDivElement>();
+  const volCard = useElementSize<HTMLDivElement>();
+  const sliceH = (w: number) => clampN(Math.round(w * 0.72), 340, 560);
+  const projH = clampN(Math.round(psCard.size.width * 0.62), 320, 480);
+  const corrH = clampN(Math.round(corrCard.size.width * 0.62), 320, 480);
+  const volH = clampN(Math.round(volCard.size.width * 0.52), 460, 760);
+
+  return (
+    <div className="lab">
+      <header className="lab-header">
+        <div>
+          <h1>TimeParadoxLab 3D</h1>
+          <div className="subtitle">
+            5D singular-spacetime simulator · split-complex geometry · (x,t,α) volume · typed singular states
+          </div>
+        </div>
+        <div className="disclaimer">
+          Research visualisation, not verified physics. The α-axis is a modeling coordinate
+          for singular structure; +dα² is a speculative two-time signature, not standard SR.
+        </div>
+      </header>
+
+      <div className="lab-grid">
+        <aside className="col-left">
+          <ControlPanel
+            scenario={scenario} setScenario={setScenario}
+            alpha={alpha} setAlpha={setAlpha}
+            branch={branch} setBranch={setBranch}
+            closeLoop={closeLoop} setCloseLoop={setCloseLoop}
+            phases={DEMO_PHASES} activePhaseId={activePhaseId} onSelectPhase={onSelectPhase}
+            playing={playing} onPlay={onPlay} onPause={onPause} onReset={onReset}
+            speed={speed} setSpeed={setSpeed}
+            onRunTests={onRunTests} testResults={testResults}
+            cameraPreset={cameraPreset} setCameraPreset={setCameraPreset}
+            layerVisibility={layers} onToggleLayer={onToggleLayer}
+            wLabel={wLabel} setWLabel={setWLabel}
+            showLightBaseline={showLightBaseline} setShowLightBaseline={setShowLightBaseline}
+            showSubCPath={showSubCPath} setShowSubCPath={setShowSubCPath}
+            onHelp={() => setHelpOpen(true)}
+          />
+        </aside>
+
+        <main className="col-center">
+          <div className="slice-row">
+            <div ref={stCard.ref} className="canvas-card">
+              <SpacetimeCanvas diag={diag} progress={progress} width={stCard.size.width} height={sliceH(stCard.size.width)} highlight={highlight} showLightBaseline={showLightBaseline} showSubCPath={showSubCPath} />
+            </div>
+            <div ref={apCard.ref} className="canvas-card">
+              <AlphaPlaneCanvas diag={diag} progress={progress} pulse={clock} width={apCard.size.width} height={sliceH(apCard.size.width)} highlight={highlight} />
+            </div>
+          </div>
+
+          <div className="slice-row">
+            <div ref={psCard.ref} className="canvas-card">
+              <ProjectionSpeedCanvas diag={diag} width={psCard.size.width} height={projH} pulse={clock} />
+            </div>
+            <div ref={corrCard.ref} className="canvas-card">
+              <VWCorrelationFieldPanel diag={diag} width={corrCard.size.width} height={corrH} pulse={clock} />
+            </div>
+          </div>
+
+          <div ref={volCard.ref} className="panel volume-wrap">
+            <Volume3DView
+              diag={diag} events={events} progress={progress}
+              width={volCard.size.width} height={volH}
+              cameraPreset={cameraPreset} layerVisibility={layers}
+              selectedEventId={selectedEventId}
+              onSelectEvent={setSelectedEventId}
+              onHoverText={setHoverText}
+              showLightBaseline={showLightBaseline}
+            />
+          </div>
+
+          <EventLog events={events} selectedEventId={selectedEventId} onSelectEvent={setSelectedEventId} onExport={onExport} />
+        </main>
+
+        <aside className="col-right">
+          <DiagnosticsPanel diag={diag} />
+          <HoverInspector diag={diag} hoverText={hoverText} selectedEvent={selectedEvent} />
+          <div className="panel">
+            <h3>3D legend</h3>
+            <VolumeLegend />
+          </div>
+        </aside>
+      </div>
+
+      <HelpOverlay open={helpOpen} onClose={() => setHelpOpen(false)} />
+    </div>
+  );
+}
+
+
+// ===================== bootstrap =====================
+ReactDOM.createRoot(document.getElementById('root')).render(
+  React.createElement(TimeParadoxLab)
+);
+
+</script>
+
+<script>
+(function () {
+  function fail(err) {
+    var root = document.getElementById('root');
+    root.innerHTML = '<div class="boot-error">TimeParadoxLab failed to start:\n\n' +
+      ((err && err.message) ? err.message : String(err)) + '</div>';
+    console.error(err);
+  }
+  if (typeof React === 'undefined' || typeof ReactDOM === 'undefined') {
+    return fail(new Error('Vendored React/ReactDOM not found. Keep the vendor/ folder next to this file.'));
+  }
+  if (typeof Babel === 'undefined') {
+    return fail(new Error('Vendored Babel not found. Keep vendor/babel.min.js next to this file.'));
+  }
+  if (typeof THREE === 'undefined') {
+    return fail(new Error('Vendored Three.js not found. Keep vendor/three.min.js next to this file.'));
+  }
+  try {
+    var src = document.getElementById('appsrc').textContent;
+    var out = Babel.transform(src, {
+      filename: 'TimeParadoxLab.tsx',
+      presets: [
+        ['typescript', { allExtensions: true, isTSX: true }],
+        ['react', { runtime: 'classic' }]
+      ]
+    }).code;
+    new Function(out)();
+  } catch (err) {
+    fail(err);
+  }
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,28 @@
+{
+  "name": "time-paradox-lab",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "description": "TimeParadoxLab — a 5D singular-spacetime research visualization (split-complex geometry + typed singular state machine).",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "standalone": "python build_standalone.py"
+  },
+  "dependencies": {
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "three": "^0.148.0"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.3",
+    "@types/react-dom": "^18.3.0",
+    "@vitejs/plugin-react": "^4.3.1",
+    "typescript": "^5.5.3",
+    "vite": "^5.4.0",
+    "vitest": "^2.0.0"
+  }
+}

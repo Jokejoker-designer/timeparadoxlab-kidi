@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>TimeParadoxLab — 5D Singularity Simulator</title>
+    <style>
+      body { margin: 0; background: #070a11; color: #d6e2f5;
+             font-family: ui-sans-serif, system-ui, sans-serif; }
+      .fileinfo { max-width: 640px; margin: 12vh auto; padding: 28px 32px;
+                  background: #0e1420; border: 1px solid #1e2840; border-radius: 12px;
+                  line-height: 1.6; }
+      .fileinfo h1 { background: linear-gradient(90deg,#3fd0ff,#aa78ff);
+                     -webkit-background-clip: text; background-clip: text; color: transparent; }
+      .fileinfo code { background: #131b2b; padding: 2px 6px; border-radius: 5px;
+                       font-family: ui-monospace, monospace; }
+      .fileinfo a { color: #3fd0ff; }
+    </style>
+  </head>
+  <body>
+    <div id="root">
+      <!-- Shown only when opened directly from disk (file://) without the Vite dev server. -->
+      <div class="fileinfo" id="file-fallback" style="display:none">
+        <h1>TimeParadoxLab</h1>
+        <p>This <code>index.html</code> is the entry point for the
+           <strong>Vite dev project</strong> and needs a dev server:</p>
+        <p><code>npm install &amp;&amp; npm run dev</code></p>
+        <p>To run <strong>right now with no toolchain</strong>, open the offline build instead:
+           <a href="./standalone.html">standalone.html</a>.</p>
+      </div>
+    </div>
+    <script>
+      // If loaded from disk (no dev server), the module below won't execute —
+      // reveal the fallback message pointing at standalone.html.
+      if (location.protocol === 'file:') {
+        var el = document.getElementById('file-fallback');
+        if (el) el.style.display = 'block';
+      }
+    </script>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
